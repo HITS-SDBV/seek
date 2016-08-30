@@ -1,0 +1,84 @@
+---
+- include: vagrant/ansible/site.yml
+
+- hosts: [rvm]
+  roles:
+  - role: rvm_io.rvm1-ruby
+    become: yes
+    when: rvm1_rubies|length > 0
+
+- hosts: [all]
+  roles:
+  - name: GROG.package
+    become: yes
+    package_list:
+    - name: libcurl4-gnutls-dev # for curb gem
+    - name: libxml++2.6-dev # for libxml-ruby gem
+    - name: libmysqlclient-dev # for mysql gem
+    - name: libpq-dev # for pq gem
+    - name: libmagick++-dev # for rmagick gem
+    - name: imagemagick # for rmagick gem
+    - name: libreoffice # for soffice service
+    - name: poppler-utils # for pdf2text
+    - name: nodejs # for uglifier execjs
+
+  tasks:
+  - name: install gem bundler
+    command: /bin/bash -lc "rvm `cat .ruby-version` @`cat .ruby-gemset` --create do gem install bundler"
+    args:
+      chdir: "{{ seek_project_root }}"
+  - name: bundle install
+    command: /bin/bash -lc "rvm `cat .ruby-version` @`cat .ruby-gemset` --create do bundle install"
+    args:
+      chdir: "{{ seek_project_root }}" 
+  - name: gem install ruby-debug-ide		
+    command: /bin/bash -lc "rvm `cat .ruby-version` @`cat .ruby-gemset` --create do gem install ruby-debug-ide"		
+    args:		
+      chdir: "{{ seek_project_root }}"
+
+- hosts: [mysql]
+  roles:
+    - role: geerlingguy.mysql
+      become: yes
+
+- hosts: [all]
+  tasks:
+    - name: bundle install
+      command: /bin/bash -lc "cd {{ seek_project_root }} && bundle install"
+    - name: generate config files from templates
+      template:
+        src:  "{{ seek_project_root }}/{{ item }}.tpl"
+        dest: "{{ seek_project_root }}/{{ item }}"
+      with_items:
+        - "config/database.yml"
+        - "config/sunspot.yml"
+#    - name: rake db:migrate
+#      command: /bin/bash -lc "cd {{ seek_project_root }} && rake db:migrate RAILS_ENV={{ rails_env }}"
+    - name: rake db:setup
+      command: /bin/bash -lc "cd {{ seek_project_root }} && rake db:setup RAILS_ENV={{ rails_env }}"
+    - name: copy initd scripts for services
+      become: yes
+      template:
+        src:  "{{ seek_project_root }}/script/initd/{{ item }}.tpl"
+        dest: "/etc/init.d/{{ item }}"
+        mode: 0751
+      with_items: "{{ seek_initd }}"
+    - name: enable and start services
+      become: yes
+      service:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+      with_items: "{{ seek_initd }}"
+    - name: add RAILS_ENV in shell profile
+      lineinfile:
+        dest:        "{{ ansible_env.HOME }}/.profile"
+        backup:      yes
+        state:       present
+        line:        'export RAILS_ENV={{ rails_env }}'
+        regexp:      '^export RAILS_ENV=.*$'
+
+- hosts: [passenger]
+  roles:
+    - role: ansible-role-passenger
+      become: yes
