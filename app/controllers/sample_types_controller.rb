@@ -37,6 +37,7 @@ class SampleTypesController < ApplicationController
 
   def create_from_template
     @sample_type = SampleType.new(params[:sample_type])
+    @sample_type.uploaded_template = true
     @tab = 'from-template'
     handle_upload_data
     attributes = build_attributes_hash_for_content_blob(content_blob_params.first, nil)
@@ -67,6 +68,7 @@ class SampleTypesController < ApplicationController
     # removes controlled vocabularies set on attributes where the type is not CV
     @sample_type.fix_up_controlled_vocabs
     @tab = 'manual'
+    @sample_type.generate_template
 
     respond_to do |format|
       if @sample_type.save
@@ -84,6 +86,7 @@ class SampleTypesController < ApplicationController
   def update
     respond_to do |format|
       if @sample_type.update_attributes(params[:sample_type])
+        @sample_type.generate_template unless @sample_type.uploaded_template?
         format.html { redirect_to @sample_type, notice: 'Sample type was successfully updated.' }
         format.json { head :no_content }
       else

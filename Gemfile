@@ -15,6 +15,7 @@ gem 'libxml-ruby', '>=2.6.0', require: 'libxml'
 gem 'uuid', '~>2.3'
 gem 'RedCloth', '4.2.9'
 gem 'simple-spreadsheet-extractor', '~>0.15.2'
+gem 'sample-template-generator-gem'
 gem 'rmagick', '2.15.2'
 gem 'rest-client'
 gem 'factory_girl', '2.6.4'
@@ -110,7 +111,7 @@ gem 'bundler', '>= 1.8.4'
 source 'https://rails-assets.org' do
   gem 'rails-assets-bootstrap-multiselect', '~> 0.9.13'
   gem 'rails-assets-bootstrap-tagsinput', '~> 0.8.0'
-  gem 'rails-assets-bootstrap3-typeahead', '~> 4.0.1'
+  gem 'rails-assets-typeahead.js', '~> 0.10.4'
 end
 
 group :assets do
