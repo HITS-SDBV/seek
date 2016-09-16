@@ -2,7 +2,15 @@ require 'test_helper'
 
 class PublicationAuthorTest < ActiveSupport::TestCase
 
-  test "split fullname" do
+  test "author" do
+    name = { :first_name => "Joe", :last_name => "Shmoe"}
+    author = PublicationAuthor.new(name)
+    assert_equal name[:first_name], author.first_name 
+    assert_equal name[:last_name], author.last_name 
+    assert_equal name.values.join(" "), author.full_name
+  end
+
+  test "split full name" do
     name1 = ["Shmoe"]
     name2 = ["Joe", "Shmoe"]
     name3 = ["Joe", "C.", "Shmoe"]
