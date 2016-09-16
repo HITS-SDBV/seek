@@ -34,7 +34,7 @@ class PublicationsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test "should not relate assays thay are not authorized for edit during create publication" do
+  test "should not relate assays that are not authorized for edit during create publication" do
     mock_pubmed(:content_file=>"pubmed_1.txt")
     assay=assays(:metabolomics_assay)
     assert_difference('Publication.count') do
@@ -47,7 +47,7 @@ class PublicationsControllerTest < ActionController::TestCase
     assert_equal 0,p.assays.count
   end
 
-  test "should create publication" do
+  test "should create publication from pubdmed_id" do
     mock_pubmed(:content_file=>"pubmed_1.txt")
     login_as(:model_owner) #can edit assay
     assay=assays(:metabolomics_assay)
@@ -95,6 +95,34 @@ class PublicationsControllerTest < ActionController::TestCase
     end
 
     assert_redirected_to edit_publication_path(assigns(:publication))
+  end
+
+  test "should create publication from details" do
+    publication = {
+      :doi => "10.1371/journal.pone.0004803",
+      :title => "Clickstream Data Yields High-Resolution Maps of Science",
+      :abstract => "Intricate maps of science have been created from citation data to visualize the structure of scientific activity. However, most scientific publications are now accessed online. Scholarly web portals record detailed log data at a scale that exceeds the number of all existing citations combined. Such log data is recorded immediately upon publication and keeps track of the sequences of user requests (clickstreams) that are issued by a variety of users across many different domains. Given these advantages of log datasets over citation data, we investigate whether they can produce high-resolution, more current maps of science.",
+      :publication_authors => ["Johan Bollen", "Herbert Van de Sompel", "Aric Hagberg", "Luis Bettencourt", "Ryan Chute", "Marko A. Rodriguez", "Lyudmila Balakireva"],
+      :journal => "Public Library of Science (PLoS)",
+      :published_date => Date.new(2011,3),
+      :project_ids=>[projects(:sysmo_project).id]
+    }
+
+    assert_difference('Publication.count') do
+      post :create, :subaction => "Create", :publication => publication
+    end
+
+    assert_redirected_to edit_publication_path(assigns(:publication))
+    p=assigns(:publication)
+
+    assert_nil p.pubmed_id
+    assert_equal publication[:doi], p.doi
+    assert_equal publication[:title], p.title
+    assert_equal publication[:abstract], p.abstract
+    assert_equal publication[:journal], p.journal
+    assert_equal publication[:published_date], p.published_date
+    assert_equal publication[:publication_authors], p.publication_authors.collect { |author| author.full_name }
+    assert_equal publication[:project_ids], p.projects.collect { |project| project.id }
   end
 
   test "should only show the year for 1st Jan" do
@@ -577,7 +605,6 @@ class PublicationsControllerTest < ActionController::TestCase
     url = "http://www.crossref.org/openurl/?" + params.to_param
     file=options[:content_file]
     stub_request(:get,url).to_return(:body=>File.new("#{Rails.root}/test/fixtures/files/mocking/#{file}"))
-
   end
 
   def mock_pubmed options
