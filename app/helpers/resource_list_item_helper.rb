@@ -99,7 +99,7 @@ module ResourceListItemHelper
   end
 
   def list_item_authorized_list *args
-   "<p class=\"list_item_attribute\">#{authorized_list *args}</p>".html_safe
+   "<p class=\"list_item_attribute\">#{authorized_list( *args)}</p>".html_safe
   end
 
   def list_item_attribute attribute, value, url=nil, url_options={}
@@ -241,7 +241,7 @@ module ResourceListItemHelper
 
   def list_item_author_list(all_authors)
     authors = all_authors.select {|a| a.person && a.person.can_view? }
-    other_authors = all_authors.select {|a| a.person.nil? }.map {|a| a.last_name + ' ' + a.first_name}.join(',')
+    other_authors = all_authors.select {|a| a.person.nil? }.map {|a| a.full_name}.join(',')
     list_item_person_list(authors.map {|a| a.person}, other_authors, 'Author')
   end
 

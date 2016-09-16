@@ -223,7 +223,7 @@ class Publication < ActiveRecord::Base
       unless seek_author.nil?
         author_names << seek_author.name
       else
-        author_names << author.first_name + " " + author.last_name
+        author_names << author.full_name
       end
     end
     author_names
