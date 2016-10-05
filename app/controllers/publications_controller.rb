@@ -254,7 +254,6 @@ class PublicationsController < ApplicationController
 
     authors = []
     authors_q.each { |author_i, author_q|
-<<<<<<< HEAD
       params = { }
       if author_q.key?('full_name')
         first_name, last_name = PublicationAuthor::split_full_name author_q['full_name']
@@ -262,9 +261,6 @@ class PublicationsController < ApplicationController
       else
         params = { :first_name => author_q['first_name'], :last_name => author_q['last_name'] }
       end
-=======
-      params = { :first_name => author_q['first_name'], :last_name => author_q['last_name'] }
->>>>>>> bc566e923121eca0aa8018e77095a5648dc8f278
 
       authors_db = PublicationAuthor.where(params)
                                     .select([:person_id, :first_name, :last_name])
@@ -287,7 +283,6 @@ class PublicationsController < ApplicationController
           user = users_db[0]
           authors << { :name => user.name }
         else # just add the queried name as author
-<<<<<<< HEAD
           authors << { :person_id => nil, :first_name => params[:first_name], :last_name => params[:last_name], :count => 0 }
         end
       end
@@ -309,29 +304,6 @@ class PublicationsController < ApplicationController
       end
     end
 
-=======
-          authors << { :person_id => nil, :first_name => author_q['first_name'], :last_name => author_q['last_name'], :count => 0 }
-        end
-      end
-    }
-
-    respond_to do |format|
-      format.json { render :json => authors }
-      format.xml  { render :xml  => authors }
-    end
-  end
-
-  def query_authors_typeahead
-    full_name  = params[:full_name]
-    if !full_name
-      error = "require query parameter full_name"
-      respond_to do |format|
-        format.json { render :json => { :error => error }, :status => 422 }
-        format.xml  { render :xml  => { :error => error }, :status => 422 }
-      end
-    end
-
->>>>>>> bc566e923121eca0aa8018e77095a5648dc8f278
     first_name, last_name = PublicationAuthor.split_full_name full_name
 
     # all authors
@@ -351,14 +323,6 @@ class PublicationsController < ApplicationController
     authors.delete_if { |author| author[:first_name].empty? && author[:last_name].empty? }
     author = PublicationAuthor.where({ :first_name => first_name, :last_name => last_name}).limit(1)
 
-<<<<<<< HEAD
-=======
-    # add the queried author if he does not exist
-    if author.empty?
-      authors << { :person_id => nil, :first_name => first_name, :last_name => last_name, :count => 0 }
-    end
-
->>>>>>> bc566e923121eca0aa8018e77095a5648dc8f278
     respond_to do |format|
       format.json { render :json => authors }
       format.xml  { render :xml  => authors }
