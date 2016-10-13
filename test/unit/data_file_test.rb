@@ -82,7 +82,7 @@ class DataFileTest < ActiveSupport::TestCase
   test "version created on save" do
     User.current_user = Factory(:user)
     df = DataFile.new(:title=>"testing versions",:projects=>[Factory(:project)],:policy => Factory(:private_policy))
-    assert_equal true,  df.valid?
+    assert  df.valid?
     df.save!
     df = DataFile.find(df.id)
     assert_equal 1, df.version
@@ -117,8 +117,8 @@ class DataFileTest < ActiveSupport::TestCase
     assert_not_nil df.policy
     assert_equal Policy::PRIVATE, df.policy.sharing_scope
     assert_equal Policy::NO_ACCESS, df.policy.access_type
-    assert_equal false,df.policy.use_whitelist
-    assert_equal false,df.policy.use_blacklist
+    assert !df.policy.use_whitelist
+    assert !df.policy.use_blacklist
     assert df.policy.permissions.empty?
   end
 
@@ -132,8 +132,8 @@ class DataFileTest < ActiveSupport::TestCase
       assert !df.policy.valid?
       assert_blank df.policy.sharing_scope
       assert_blank df.policy.access_type
-      assert_equal false,df.policy.use_whitelist
-      assert_equal false,df.policy.use_blacklist
+      assert !df.policy.use_whitelist
+      assert !df.policy.use_blacklist
       assert_blank df.policy.permissions
     end
   end
@@ -477,7 +477,7 @@ class DataFileTest < ActiveSupport::TestCase
     assert_empty data_file.possible_sample_types
 
 
-    sample_type = SampleType.new title:'from template', uploaded_template: true
+    sample_type = SampleType.new title:'from template', uploaded_template: true,:project_ids=>[Factory(:project).id]
     sample_type.content_blob = Factory(:sample_type_template_content_blob)
     sample_type.build_attributes_from_template
     sample_type.save!
