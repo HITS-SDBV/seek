@@ -1,5 +1,6 @@
 class SampleType < ActiveRecord::Base
-  attr_accessible :title, :uuid, :sample_attributes_attributes, :description, :uploaded_template, :project_ids
+  attr_accessible :title, :uuid, :sample_attributes_attributes,
+                  :description, :uploaded_template, :project_ids, :tags
 
   searchable(auto_index: false) do
     text :attribute_search_terms
@@ -12,6 +13,10 @@ class SampleType < ActiveRecord::Base
 
   # everything concerned with sample type templates
   include Seek::Templates::SampleTypeTemplateConcerns
+
+  include Seek::Taggable
+
+  acts_as_annotatable name_field: :title
 
   acts_as_uniquely_identifiable
 
@@ -48,6 +53,14 @@ class SampleType < ActiveRecord::Base
         attribute.sample_controlled_vocab = nil
       end
     end
+  end
+
+  def tags= tags
+    tag_annotations(tags, 'sample_type_tags')
+  end
+
+  def tags
+    annotations_with_attribute('sample_type_tags').collect(&:value_content)
   end
 
   def can_download?
