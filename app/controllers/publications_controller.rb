@@ -15,7 +15,22 @@ class PublicationsController < ApplicationController
   include Seek::BreadCrumbs
 
   include Seek::IsaGraphExtensions
-    
+  
+  def index
+    if request.format.xml? || request.format.html?
+      super
+    else
+      respond_to do |format|
+        format.any( *Publication::EXPORT_TYPES.keys ) {
+          send_data(
+            @publications.collect { |publication| publication.export(request.format.to_sym) }.join("\n\n"),
+            :type => request.format.to_sym,
+            :filename => "publications.#{request.format.to_sym}"
+          )
+        }
+      end
+    end
+  end
   # GET /publications/1
   # GET /publications/1.xml
   def show
