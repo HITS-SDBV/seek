@@ -1,5 +1,4 @@
 module Seek
-
   module FacetedBrowsing
 
     def items_for_result
