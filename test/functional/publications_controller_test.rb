@@ -126,6 +126,29 @@ class PublicationsControllerTest < ActionController::TestCase
     assert_equal publication[:project_ids], p.projects.collect { |project| project.id }
   end
 
+  test "should import from bibtex file" do
+    publication = {
+      :title        => "Taverna: a tool for building and running workflows of services.",
+      :journal      => "Nucleic Acids Res",
+      :authors      => [
+        PublicationAuthor.new({ :first_name => "D."   , :last_name => "Hull"        , :author_index => 0}),
+        PublicationAuthor.new({ :first_name => "K."   , :last_name => "Wolstencroft", :author_index => 1}),
+        PublicationAuthor.new({ :first_name => "R."   , :last_name => "Stevens"     , :author_index => 2}),
+        PublicationAuthor.new({ :first_name => "C."   , :last_name => "Goble"       , :author_index => 3}),
+        PublicationAuthor.new({ :first_name => "M. R.", :last_name => "Pocock"      , :author_index => 4}),
+        PublicationAuthor.new({ :first_name => "P."   , :last_name => "Li"          , :author_index => 5}),
+        PublicationAuthor.new({ :first_name => "T."   , :last_name => "Oinn"        , :author_index => 6})
+      ],
+      :published_date => Date.new(2006)
+    }
+    post :create, :subaction => "Import", :publication => { :bibtex_file => fixture_file_upload('files/publication.bibtex') }
+    p = assigns(:publication)
+    assert_equal publication[:title], p.title
+    assert_equal publication[:journal], p.journal
+    assert_equal publication[:authors].collect(&:full_name), p.publication_authors.collect(&:full_name)
+    assert_equal publication[:published_date], p.published_date
+  end
+
   test "should only show the year for 1st Jan" do
     publication = Factory(:publication,:published_date=>Date.new(2013,1,1))
     get :show,:id=>publication
