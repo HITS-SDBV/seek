@@ -8,7 +8,7 @@ eclipse_package: php
 eclipse_plugins_install:
   - egit
   - aptana_studio
-  - redmine_mylyn
+#  - redmine_mylyn
 
 package_list_eclipse:
   - name: firefox
@@ -45,7 +45,7 @@ rails_env: development
 
 # nginx setup
 nginx_remove_default_vhost: true
-passenger_ruby: /home/vagrant/sw/rvm/gems/{{ rvm1_rubies[0] }}@seek-1-2/wrappers/ruby
+passenger_ruby: /home/vagrant/sw/rvm/gems/{{ rvm1_rubies[0] }}@seek-1-3/wrappers/ruby
 
 nginx_vhosts:
   - listen: "80 default_server"
