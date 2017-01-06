@@ -22,8 +22,8 @@ class SamplesController < ApplicationController
 
   def new
     if params[:sample_type_id]
-    @sample = Sample.new(sample_type_id: params[:sample_type_id])
-    respond_with(@sample)
+      @sample = Sample.new(sample_type_id: params[:sample_type_id])
+      respond_with(@sample)
     else
       redirect_to select_sample_types_path
     end
@@ -60,7 +60,7 @@ class SamplesController < ApplicationController
     else
       flash[:error] = 'It was not possible to delete the sample.'
     end
-    respond_with(@sample, location: samples_path)
+    respond_with(@sample, location: root_path)
   end
 
   # called from AJAX, returns the form containing the attributes for the sample_type_id

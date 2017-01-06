@@ -245,7 +245,7 @@ module ApplicationHelper
     list_item = "<li>"
     if icon_type.downcase == "flag"
       list_item += flag_icon(item.country)
-    elsif icon_type == "data_file" || icon_type == "sop"
+    elsif icon_type == "sop"
       list_item += file_type_icon(item)
     else
       list_item += image_tag_for_key(icon_type.downcase, nil, icon_type.camelize, nil, "", false, size)
@@ -536,7 +536,7 @@ module ApplicationHelper
      Strain=>"You cannot delete this Strain. Samples associated with it or you are not authorized.",
      Project=>"You cannot delete this #{I18n.t 'project'}. It may have people associated with it.",
      Institution=>"You cannot delete this Institution. It may have people associated with it.",
-     SampleType=>"You cannot delete this Sample Type, is may have Samples associated with it",
+     SampleType=>"You cannot delete this Sample Type, it may have Samples associated with it or have another Sample Type linked to it",
      SampleControlledVocab=>"You can delete this Controlled Vocabulary, it may be associated with a Sample Type"
     }
   end
@@ -611,6 +611,10 @@ module ApplicationHelper
     html_options[:class] << ' btn btn-default'
     text = html_options.delete(:button_text) || 'Cancel'
     link_to text, path, html_options
+  end
+
+  def using_docker?
+    Seek::Docker.using_docker?
   end
 
   private  

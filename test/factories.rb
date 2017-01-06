@@ -329,34 +329,52 @@ Factory.define(:data_file) do |f|
   f.projects { [Factory.build(:project)] }
   f.association :contributor, factory: :person
   f.after_create do |data_file|
-    if data_file.content_blob.blank?
-      data_file.content_blob = Factory.create(:pdf_content_blob, asset: data_file, asset_version: data_file.version)
+    if data_file.content_blobs.blank?
+      data_file.content_blobs = [Factory.create(:pdf_content_blob, asset: data_file, asset_version: data_file.version)]
     else
-      data_file.content_blob.asset = data_file
-      data_file.content_blob.asset_version = data_file.version
-      data_file.content_blob.save
+      data_file.content_blobs.each do |blob|
+        blob.asset = data_file
+        blob.asset_version = data_file.version
+        blob.save
+      end
     end
   end
 end
 
 Factory.define(:rightfield_datafile, parent: :data_file) do |f|
-  f.association :content_blob, factory: :rightfield_content_blob
+  f.after_create do |df|
+    df.content_blobs=[Factory.create(:rightfield_content_blob)]
+  end
 end
 
 Factory.define(:rightfield_annotated_datafile, parent: :data_file) do |f|
-  f.association :content_blob, factory: :rightfield_annotated_content_blob
+  f.after_create do |df|
+    df.content_blobs=[Factory.create(:rightfield_annotated_content_blob)]
+  end
 end
 
 Factory.define(:non_spreadsheet_datafile, parent: :data_file) do |f|
-  f.association :content_blob, factory: :cronwright_model_content_blob
+  f.after_create do |df|
+    df.content_blobs=[Factory.create(:cronwright_model_content_blob)]
+  end
 end
 
 Factory.define(:xlsx_spreadsheet_datafile, parent: :data_file) do |f|
-  f.association :content_blob, factory: :xlsx_content_blob
+  f.after_create do |df|
+    df.content_blobs=[Factory.create(:xlsx_content_blob)]
+  end
 end
 
 Factory.define(:small_test_spreadsheet_datafile, parent: :data_file) do |f|
-  f.association :content_blob, factory: :small_test_spreadsheet_content_blob
+  f.after_create do |df|
+    df.content_blobs=[Factory.create(:small_test_spreadsheet_content_blob)]
+  end
+end
+
+Factory.define(:strain_sample_data_file, parent: :data_file) do |f|
+  f.after_create do |df|
+    df.content_blobs=[Factory.create(:strain_sample_data_content_blob)]
+  end
 end
 
 # Model
@@ -560,14 +578,16 @@ end
 
 Factory.define(:data_file_version_with_blob, parent: :data_file_version) do |f|
   f.after_create do |data_file_version|
-    if data_file_version.content_blob.blank?
-      data_file_version.content_blob = Factory.create(:pdf_content_blob,
-                                                      asset: data_file_version.data_file,
-                                                      asset_version: data_file_version.version)
+    if data_file_version.content_blobs.empty?
+      Factory.create(:pdf_content_blob,
+                     asset: data_file_version.data_file,
+                     asset_version: data_file_version.version)
     else
-      data_file_version.content_blob.asset = data_file_version.data_file
-      data_file_version.content_blob.asset_version = data_file_version.version
-      data_file_version.content_blob.save
+      data_file_version.content_blobs.each do |blob|
+        blob.asset = data_file_version.data_file
+        blob.asset_version = data_file_version.version
+        blob.save
+      end
     end
   end
 end
@@ -844,6 +864,12 @@ Factory.define(:sample_type_populated_template_content_blob, parent: :content_bl
   f.original_filename 'sample-type-populated.xlsx'
   f.content_type 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   f.data File.new("#{Rails.root}/test/fixtures/files/sample-type-populated.xlsx", 'rb').read
+end
+
+Factory.define(:sample_type_populated_template_blank_rows_content_blob, parent: :content_blob) do |f|
+  f.original_filename 'sample-type-populated-blank-rows.xlsx'
+  f.content_type 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  f.data File.new("#{Rails.root}/test/fixtures/files/sample-type-populated-blank-rows.xlsx", 'rb').read
 end
 
 Factory.define(:strain_sample_data_content_blob, parent: :content_blob) do |f|
@@ -1255,9 +1281,18 @@ end
 
 Factory.define(:strain_sample_type, parent: :sample_type) do |f|
   f.title 'Strain type'
+  f.association :content_blob, factory: :strain_sample_data_content_blob
+  f.uploaded_template true
   f.after_build do |type|
-    type.sample_attributes << Factory.build(:sample_attribute, title: 'name', sample_attribute_type: Factory(:string_sample_attribute_type), required: true, is_title: true, sample_type: type)
-    type.sample_attributes << Factory.build(:sample_attribute, title: 'seekstrain', sample_attribute_type: Factory(:strain_sample_attribute_type), required: true, sample_type: type)
+    type.sample_attributes << Factory.build(:sample_attribute, template_column_index: 1, title: 'name', sample_attribute_type: Factory(:string_sample_attribute_type), required: true, is_title: true, sample_type: type)
+    type.sample_attributes << Factory.build(:sample_attribute, template_column_index: 2, title: 'seekstrain', sample_attribute_type: Factory(:strain_sample_attribute_type), required: true, sample_type: type)
+  end
+end
+
+Factory.define(:optional_strain_sample_type, parent: :strain_sample_type) do |f|
+  f.after_build do |type|
+    type.sample_attributes = [Factory.build(:sample_attribute, template_column_index: 1, title: 'name', sample_attribute_type: Factory(:string_sample_attribute_type), required: true, is_title: true, sample_type: type),
+                              Factory.build(:sample_attribute, template_column_index: 2, title: 'seekstrain', sample_attribute_type: Factory(:strain_sample_attribute_type), required: false, sample_type: type)]
   end
 end
 
@@ -1302,6 +1337,25 @@ Factory.define(:linked_sample_type, parent: :sample_type) do |f|
   f.sequence(:title) { |n| "linked sample type #{n}" }
   f.after_build do |type|
     type.sample_attributes << Factory.build(:sample_attribute, title: 'title', sample_attribute_type: Factory(:string_sample_attribute_type), required: true, is_title: true, sample_type: type)
-    type.sample_attributes << Factory.build(:sample_sample_attribute, title: 'patient', linked_sample_type: Factory(:patient_sample_type), required: true, sample_type: type)
+    type.sample_attributes << Factory.build(:sample_sample_attribute, title: 'patient', linked_sample_type: Factory(:patient_sample_type,project_ids:type.projects.collect(&:id)), required: true, sample_type: type)
+  end
+end
+
+Factory.define(:linked_sample_type_to_self, parent: :sample_type) do |f|
+  f.sequence(:title) { |n| "linked sample type #{n}" }
+  f.after_build do |type|
+    type.sample_attributes << Factory.build(:sample_attribute, title: 'title', sample_attribute_type: Factory(:string_sample_attribute_type), required: true, is_title: true, sample_type: type)
+    type.sample_attributes << Factory.build(:sample_sample_attribute, title: 'self', linked_sample_type: type, required: true, sample_type: type)
+  end
+end
+
+Factory.define(:sample_from_file, parent: :sample) do |f|
+  f.sequence(:title) { |n| "Sample #{n}" }
+  f.association :sample_type, factory: :strain_sample_type
+  f.projects { [Factory.build(:project)] }
+  f.association :originating_data_file, factory: :strain_sample_data_file
+  f.after_build do |sample|
+    sample.set_attribute(:name, sample.title) if sample.data.key?(:name)
+    sample.set_attribute(:seekstrain, '1234')
   end
 end
