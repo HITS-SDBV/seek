@@ -1,5 +1,15 @@
 #!/bin/sh -e
 #
+### BEGIN INIT INFO
+# Provides:          seek-delayed-job
+# Required-Start:    $syslog
+# Required-Stop:     $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Seek delayed job daemon
+# Description:       Start seek delayed job
+### END INIT INFO
+
 # Symlink target for initscripts that have been converted to Upstart.
  
 set -e

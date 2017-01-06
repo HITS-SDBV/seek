@@ -1,4 +1,15 @@
 #!/bin/bash
+#
+### BEGIN INIT INFO
+# Provides:          seek-soffice
+# Required-Start:    $syslog
+# Required-Stop:     $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Seek soffice daemon
+# Description:       Start seek soffice
+### END INIT INFO
+
 # originally from: http://code.google.com/p/openmeetings/wiki/OpenOfficeConverter
 # openoffice.org  headless server script
 #

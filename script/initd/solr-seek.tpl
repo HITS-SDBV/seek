@@ -1,4 +1,14 @@
 #!/bin/sh -e
+#
+### BEGIN INIT INFO
+# Provides:          seek-solr
+# Required-Start:    $syslog
+# Required-Stop:     $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Seek solr daemon
+# Description:       Start seek solr
+### END INIT INFO
 # upstart-job
 #
 # Symlink target for initscripts that have been converted to Upstart.
