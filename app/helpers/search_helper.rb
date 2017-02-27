@@ -48,11 +48,10 @@ module SearchHelper
   end
 
   def search_extractable_items items, search_query
-
     sheet_array = []
-    items = items.select { |item| item.is_asset? && item.can_download? && item.respond_to?(:content_blob) && item.content_blob.is_extractable_spreadsheet? }
-    results = items.select do |object|
-      workbook = Rails.cache.fetch(object.content_blob.cache_key) do
+    e_items = items.select { |item| item.is_asset? && item.can_download? && item.respond_to?(:content_blobs) && item.content_blobs.first.is_extractable_spreadsheet? }
+    results = e_items.select do |object|
+      workbook = Rails.cache.fetch(object.content_blobs.first.cache_key) do
         object.spreadsheet
       end
       xml = object.spreadsheet_xml
