@@ -356,6 +356,7 @@ SEEK::Application.routes.draw do
       get :typeahead
       get :preview
       get :filter
+      post :data_file
       post :test_asset_url
       post :upload_for_tool
       post :upload_from_email
@@ -363,6 +364,7 @@ SEEK::Application.routes.draw do
       post :resource_in_tab
     end
     member do
+      post :pythonize
       get :matching_models
       get :data
       post :check_gatekeeper_required

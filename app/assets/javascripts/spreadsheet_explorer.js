@@ -515,6 +515,58 @@ function select_range(range, sheetNumber) {
     $j('div.active_sheet').scrollLeft(cell.position().left + $j('div.active_sheet').scrollLeft() - 500);
 }
 
+function read_data() {
+    //var col_header_cells = $j("table.active_sheet tr").first().children("td");
+    var selected_cells = $j("table.active_sheet tr").children("td.selected_cell");
+    // console.log(selected_cells);
+    // console.log(col_header_cells);
+
+    var data_obj = new Object();
+    $j.each(selected_cells, function(k) {
+        //console.log(selected_cells[k].id,  selected_cells[k].innerHTML);
+        var ccol = selected_cells[k].id.split("_")[1].replace(/[0-9]/g,'');
+        if (data_obj[ccol] == undefined) {data_obj[ccol] = new Array();}
+        data_obj[ccol].push(selected_cells[k].innerHTML);
+    });
+    //get rid of first value which is assumed to be column name
+    var col_headers = new Array();
+    $j.each(data_obj, function(k) {
+        col_headers.push(data_obj[k][0]);
+        data_obj[k] = data_obj[k].slice(1);
+    });
+    return data_obj;
+    //return JSON.stringify(data_obj);
+}
+function send_to_python(){
+    data = read_data();
+    //$j.post("pythonize", { x: "2,4,6", y:"4,16,36" })
+    console.log(data);
+    // console.log({ x: "2,4,6", y:"4,16,36" });
+    $j.post("pythonize", data)
+        .done(function(){
+            console.log("done - yay!")
+        })
+        .fail(function(){
+            console.log("TO DO: why does it fail?")
+        })
+        .always(function() {
+            console.log("always - not the best solution")
+            var new_page = window.open("/python_nb/outbook.nbconvert.html");
+            $j('#ipython_figure > img').remove();
+            $j("#ipython_figure_container").show();
+            var date = new Date();
+            $j('#ipython_figure').prepend($j('<img>',{id: 'scatterPlot', src:"/python_nb/table.png?"+ date.getTime()}));
+        })
+    ;
+//    $j.when(python_ajax).done(function(a1) { maybe this doesn't work because the call "fails"
+//      // alert("...and we're done")
+//       console.log(a1)
+//       $j('#ipython_figure > img').remove();
+//       $j("#ipython_figure_container").show();
+//       $j('#ipython_figure').prepend($j('<img>',{id: 'scatterPlot', src:"/python_nb/scatter.png"}));
+//    })
+}
+
 function deselect_cells() {
     //Deselect any cells and headings
     $j(".selected_cell").removeClass("selected_cell");

@@ -1,0 +1,20 @@
+<div id="ipython_figure_container" class="spreadsheet_popup" style="display:none">
+  <div class="spreadsheet_box_title">
+    <div style="float: left">Plot from ipython notebook</div>
+    <div style="float: right"><a href="#" onclick="cleanup_ipython_plot(); return false;">Close</a></div>
+    <br style="clear:both"/>
+  </div>
+  <div>
+    <button id="export_ipython_png" class="export"> Export PNG </button>
+    <button id="export_ipython_nb" class="export"> Export iPython Notebook </button>
+
+  </div>
+  <div id="ipython_figure" style=""> </div>
+</div>
+
+<script type="text/javascript">
+  function cleanup_ipython_plot() {
+    $j('#ipython_figure_container').hide();
+    $j('#ipython_figure > img').remove();
+  }
+</script>

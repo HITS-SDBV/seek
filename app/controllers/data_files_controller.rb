@@ -27,6 +27,17 @@ class DataFilesController < ApplicationController
 
   include Seek::IsaGraphExtensions
 
+  def pythonize
+    puts params.keys
+    #params[:x] = "1,2,3"
+    #params[:y] = "4,5,6"
+    k1 = params.keys[0]
+    k2 = params.keys[1]
+    #first_ipython_attempt(params[:x],params[:y])
+    first_ipython_attempt(params[k1],params[k2])
+    redirect_to "python_nb/outbook.nbconvert.html"
+  end
+
   def plot
     sheet = params[:sheet] || 2
     @csv_data = spreadsheet_to_csv(open(@data_file.content_blob.filepath), sheet, true)
@@ -353,6 +364,70 @@ class DataFilesController < ApplicationController
   end
 
   protected
+
+  # Wolfgang's first attempt at combining ruby and ipython notebooks
+  def first_ipython_attempt(x,y)
+    #  require 'json'
+    # this is the parameters that will be inserted into the notebook
+    # needs improving. probably json and then convert to string
+    xparams=x
+    yparams=y
+
+    # location of the convert command to be run
+    command = '/usr/local/bin/jupyter-nbconvert'
+    # server tmp location
+    tmp_dir = '/home/leonovhs/SEEK/Effnet/seek/public/python_nb/'
+    # location of the notebook into which parameters will be inserted
+    ## notebook = tmp_dir + 'Modified.ipynb'
+    notebook = tmp_dir + 'T_test.ipynb'
+    # location of the notebook with the inserted parameters
+    # FIXME use tempfile for outbook location
+    outbook = tmp_dir + 'outbook.ipynb'
+
+    # the outbook needs to be run in order to update the results
+    # outbook_processed holds the notebook with the updated results
+    # FIXME use tempfile for outbook_processed location
+    outbook_processed = tmp_dir + 'outbook.nbconvert.ipynb'
+
+    #
+    #  Actual work starts here
+    # FIXME make this a methods
+
+    # Read the notebook from file into a string
+    notebook_source = File.read(notebook);
+
+    # parse the notebook
+    json_notebook = JSON.parse(notebook_source);
+    notebook_source = '' # free the notebook source to save memory
+
+    # Put the input strings as python program into the first cell
+    # parameters end up in x and y
+    # works now, needs to be generalized
+    json_notebook["cells"][1]["source"]="data1=#{xparams}\ndata2=#{yparams}\n";
+
+    # FIXME needs error checking. What happens if file cannot be opened?
+    outfile = File.new(outbook,"w")
+
+    # this writes the modified book
+    outfile.write(JSON.generate(json_notebook))
+    outfile.close()
+
+    # run scripts:
+    # First execute the notebook
+    # Then transform into HTML
+    #
+    # seems to be the safest way to run ruby commands according to
+    # first run the notebook!
+    puts *%W( #{command} #{outbook} --to notebook --execute  )
+    system *%W( #{command} #{outbook} --to notebook --execute  )
+    # then turn it into HTML
+    # One alternative way to do it would be to run the script.
+    # however, I do not know how you would get the plot.
+    puts  *%W( #{command} #{outbook_processed} --to html)
+    system *%W( #{command} #{outbook_processed} --to html)
+
+    # Maybe some fishing inside the notebook in order to isolate the result of the last cell
+  end
 
   def translate_action(action)
     action = 'download' if action == 'data'
