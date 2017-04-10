@@ -104,7 +104,7 @@ class HomesControllerTest < ActionController::TestCase
   end
 
   test 'SOP upload option should be capitalized' do
-    login_as(:quentin)
+    login_as(Factory(:person))
     get :index
     assert_select 'li#create-menu ul.dropdown-menu', count: 1 do
       assert_select 'li>a', text: "#{I18n.t('sop')}", count: 1
@@ -218,8 +218,6 @@ class HomesControllerTest < ActionController::TestCase
 
     get :index
     assert_response :success
-
-    record_body
 
     assert_select '#recently_added ul.feed' do
       assert_select 'a.file-type-icon[href=?]', project_path(project) do

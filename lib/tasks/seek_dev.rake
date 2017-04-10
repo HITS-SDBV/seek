@@ -49,7 +49,7 @@ namespace :seek_dev do
   task :list_public_assets => :environment do
     [Investigation, Study, Assay, DataFile, Model, Sop, Publication].each do |assets|
       #  :logout
-      assets.all.each do |asset|
+      assets.find_each do |asset|
         if asset.can_view?
           puts "#{asset.title} - #{asset.id}"
         end
@@ -59,7 +59,7 @@ namespace :seek_dev do
 
   task(:refresh_content_types => :environment) do
 
-    ContentBlob.all.each do |cb|
+    ContentBlob.find_each do |cb|
       filename = cb.original_filename
       unless filename.nil?
         file_format = filename.split('.').last.try(:strip)
@@ -358,7 +358,7 @@ namespace :seek_dev do
       while (delayed_job_count <= total_delayed_jobs)
         puts "Restart delayed jobs"
 	      Seek::Workers.stop
-	      Seek::Workers.start_data_file_auth_lookup_worker(delayed_job_count, data_file_count)
+	      Seek::Workers.start_data_file_auth_lookup_worker(delayed_job_count)
         Delayed::Job.destroy_all
         AuthLookupUpdateQueue.destroy_all
         #DataFile.clear_lookup_table

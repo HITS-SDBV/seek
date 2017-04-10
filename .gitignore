@@ -14,6 +14,7 @@ config/environment_local.rb
 config/virtuoso_settings.yml
 config/initializers/taverna_server.rb
 config/sunspot.yml
+config/using-docker
 
 *.DS_Store
 log/*.log*
@@ -27,6 +28,7 @@ debug.log
 
 tmp/pids/*
 tmp/cache/*
+tmp/dev-cache/*
 tmp/avatars/*
 tmp/models/*
 tmp/model_images/*

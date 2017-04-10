@@ -21,6 +21,8 @@ SEEK::Application.configure do
   Seek::Config.default :exception_notification_enabled,false
   Seek::Config.default :exception_notification_recipients,""
   Seek::Config.default :hide_details_enabled,false
+  Seek::Config.default :registration_disabled,false
+  Seek::Config.default :registration_disabled_description,'Registration is not available, please contact your administrator'
   Seek::Config.default :activation_required_enabled,false
   Seek::Config.default :google_analytics_enabled, false
   Seek::Config.default :google_analytics_tracker_id, '000-000'
@@ -38,7 +40,6 @@ SEEK::Application.configure do
   Seek::Config.default :tagline_prefix, 'Find, share and exchange <b>Data</b>, <b>Models</b> and <b>Processes</b> within the'
   Seek::Config.default :publish_button_enabled, true
   Seek::Config.default :auth_lookup_enabled,true
-  Seek::Config.default :sample_parser_enabled,false
   Seek::Config.default :external_search_enabled, true
   Seek::Config.default :project_browser_enabled,false
   Seek::Config.default :experimental_features_enabled,false
@@ -132,6 +133,10 @@ SEEK::Application.configure do
   Seek::Config.default :default_consortium_access_type, Policy::VISIBLE
   Seek::Config.default :default_all_visitors_access_type, Policy::ACCESSIBLE
 
+  Seek::Config.default :permissions_popup, Seek::Config::PERMISSION_POPUP_ALWAYS
+
+  Seek::Config.default :auth_lookup_update_batch_size, 10
+
   Seek::Config.fixed :css_prepended,''
   Seek::Config.fixed :css_appended,'biovel_application'
   Seek::Config.fixed :javascript_prepended,''
@@ -144,7 +149,7 @@ SEEK::Application.configure do
   ActionView::Renderer.define_alternative({:controller=>:homes,:seek_template=>:index},:index_biovel)
   ActionView::Renderer.define_alternative({:seek_partial=>"people/resource_list_item"},"people/resource_list_item_biovel")
   ActionView::Renderer.define_alternative({:seek_partial=>"projects/resource_list_item"},"projects/resource_list_item_biovel")
-  ActionView::Renderer.define_alternative({:seek_partial=>"assets/sharing_form"},"assets/sharing_form_biovel")
+  ActionView::Renderer.define_alternative({:seek_partial=>"sharing/form"},"sharing/form_biovel")
 
   Seek::Config.default :zenodo_publishing_enabled, false
   Seek::Config.default :zenodo_api_url, 'https://zenodo.org/api'
@@ -158,4 +163,3 @@ SEEK::Application.configure do
 
   Seek::Config.default :front_page_buttons_enabled, false
 end
-

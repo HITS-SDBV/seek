@@ -64,8 +64,6 @@ SEEK::Application.configure do
   I18n.load_path << File.join(File.dirname(__FILE__), "../locales/en.yml")
   #these inflections are put here, because the config variables are just loaded after the propagation
   ActiveSupport::Inflector.inflections do |inflect|
-    inflect.human 'Specimen', I18n.t('biosamples.sample_parent_term')
-    inflect.human 'specimen', I18n.t('biosamples.sample_parent_term')
     inflect.human 'Assay', I18n.t('assays.assay')
     inflect.human 'assay', I18n.t('assays.assay')
     inflect.human 'Sop', I18n.t('sop')
@@ -96,6 +94,7 @@ SEEK::Application.configure do
     if ActiveRecord::Base.connection.table_exists? 'delayed_jobs'
       SendPeriodicEmailsJob.create_initial_jobs
       NewsFeedRefreshJob.create_initial_job
+      OpenbisEndpointCacheRefreshJob.create_initial_jobs
     end
   rescue Exception=>e
     Rails.logger.error "Error creating default delayed jobs - #{e.message}"

@@ -1,5 +1,5 @@
 class SampleAttributeType < ActiveRecord::Base
-  attr_accessible :base_type, :regexp, :title
+  attr_accessible :base_type, :regexp, :title, :placeholder
 
   validates :title, :base_type, :regexp, presence: true
   validate :validate_allowed_type, :validate_regular_expression
@@ -46,12 +46,12 @@ class SampleAttributeType < ActiveRecord::Base
   end
 
   def regular_expression
-    /#{regexp}/
+    /#{regexp}/m
   end
 
   def check_value_against_regular_expression(value)
     match = regular_expression.match(value.to_s)
-    match && match.to_s == value.to_s
+    match && (match.to_s == value.to_s)
   end
 
   def check_value_against_base_type(value, additional_options)
@@ -68,6 +68,10 @@ class SampleAttributeType < ActiveRecord::Base
 
   def seek_sample?
     base_type == Seek::Samples::BaseType::SEEK_SAMPLE
+  end
+
+  def seek_strain?
+    base_type == Seek::Samples::BaseType::SEEK_STRAIN
   end
 
   def base_type_handler(additional_options)

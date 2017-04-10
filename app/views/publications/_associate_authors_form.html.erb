@@ -1,9 +1,9 @@
 <%= folding_panel('Associate authors') do %>
-    Using the form below, you can link the authors listed in PubMed to people registered in SEEK.<br/><br/>
+    Using the form below, you can link the authors to people registered in SEEK.<br/><br/>
 
     SEEK will try and suggest the correct person based on the author's name. If this suggestion is incorrect, please select the correct person from the dropdown menu, or choose "None" if this person isn't a member of SEEK.<br/><br/>
 
-    To reset the author list to the state of the original PubMed article, click the "Disassociate All Authors" button.<br/>
+    To reset the author list to the original state of the PubMed article, click the "Disassociate All Authors" button.<br/>
 
     <div class="row">
       <div class="col-md-6">
@@ -13,7 +13,9 @@
               <% people_by_project = people_by_project_options(Project.all) -%>
               <% publication.publication_authors.each do |author| %>
                   <div class="form-group">
-                    <label class="control-label col-sm-4"><%= author.full_name -%></label>
+                    <label class="control-label col-sm-4">
+                      <%= author.first_name -%> <%= author.last_name -%>
+                    </label>
                     <div class="col-sm-8">
                       <%= select_tag "author[#{author.id}]", "<option value=''>None</option>#{people_by_project}".html_safe,
                                      :class => 'form-control' %>

@@ -1,19 +1,5 @@
 SEEK::Application.routes.draw do
 
-  resources :sample_types do
-    collection do
-      post :create_from_template
-    end
-    resources :samples
-    resources :content_blobs do
-      member do
-        get :download
-      end
-    end
-  end
-
-  resources :sample_controlled_vocabs
-
   mount MagicLamp::Genie, :at => (SEEK::Application.config.relative_url_root || "/") + 'magic_lamp'  if defined?(MagicLamp)
   mount Teaspoon::Engine, :at => (SEEK::Application.config.relative_url_root || "/") + "teaspoon" if defined?(Teaspoon)
 
@@ -205,7 +191,21 @@ SEEK::Application.routes.draw do
       get :isa_children
     end
     resources :people,:institutions,:assays,:studies,:investigations,:models,:sops,:data_files,:presentations,
-              :publications,:events,:samples,:specimens,:strains,:only=>[:index]
+              :publications,:events,:samples,:specimens,:strains,:search, :only=>[:index]
+    resources :openbis_endpoints do
+      member do
+        post :add_dataset
+      end
+      collection do
+        get :test_endpoint
+        get :fetch_spaces
+        get :show_item_count
+        get :show_items
+        get :show_dataset_files
+        post :refresh_browse_cache
+        get :browse
+      end
+    end
     resources :avatars do
       member do
         post :select
@@ -374,7 +374,6 @@ SEEK::Application.routes.draw do
       post :publish_related_items
       post :publish
       post :request_resource
-      post :convert_to_presentation
       post :update_annotations_ajax
       post :new_version
       #MERGENOTE - this is a destroy, and should be the destroy method, not post since we are not updating or creating something.
@@ -564,6 +563,7 @@ SEEK::Application.routes.draw do
       get :preview
       get :query_authors
       get :query_authors_typeahead
+      get :export
       post :fetch_preview
       post :items_for_result
       post :resource_in_tab
@@ -604,7 +604,7 @@ SEEK::Application.routes.draw do
     member do
       post :update_annotations_ajax
     end
-    resources :specimens,:assays,:people,:projects,:only=>[:index]
+    resources :specimens,:assays,:people,:projects,:samples,:only=>[:index]
   end
 
   resources :organisms do
@@ -688,6 +688,29 @@ SEEK::Application.routes.draw do
     end
   end
 
+  ### SAMPLE TYPES ###
+
+  resources :sample_types do
+    collection do
+      post :create_from_template
+      get :select
+      get :filter_for_select
+    end
+    member do
+      get :template_details
+    end
+    resources :samples
+    resources :content_blobs do
+      member do
+        get :download
+      end
+    end
+  end
+
+  ### SAMPLE CONTROLLED VOCABS ###
+
+  resources :sample_controlled_vocabs
+
   ### ASSAY AND TECHNOLOGY TYPES ###
 
   get '/assay_types/',:to=>"assay_types#show",:as=>"assay_types"
@@ -695,7 +718,6 @@ SEEK::Application.routes.draw do
   get '/technology_types/',:to=>"technology_types#show",:as=>"technology_types"
 
 
-  resources :statistics, :only => [:index]
   ### MISC MATCHES ###
   match '/search/' => 'search#index', :as => :search
   match '/search/save' => 'search#save', :as => :save_search

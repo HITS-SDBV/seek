@@ -105,6 +105,10 @@ class Person < ActiveRecord::Base
     !project.nil? && self.projects == [project]
   end
 
+  def projects_with_default_license
+    projects.select(&:default_license)
+  end
+
   #those that have updated time stamps and avatars appear first. A future enhancement could be to judge activity by last asset updated timestamp
   def self.active
     Person.unscoped.order("avatar_id is null, updated_at DESC")
@@ -453,7 +457,6 @@ class Person < ActiveRecord::Base
         projects_in_common = projects & item.projects
         pis = projects_in_common.collect{|p| p.pis}.flatten.uniq
         pis.reject!{|pi| pi.id == id}
-        item.policy_or_default
         policy = item.policy
         unless pis.blank?
           pis.each do |pi|

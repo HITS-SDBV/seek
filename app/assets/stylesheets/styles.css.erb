@@ -176,6 +176,10 @@ span.disabled, span.disabled-button,
 a.disabled, a.disabled-button{
     filter:progid:DXImageTransform.Microsoft.Alpha( Opacity=50 );
     opacity: 0.50;
+    pointer-events: none;
+}
+a[disabled] {
+  pointer-events: none;
 }
 
 .show_basic #tool_list {
@@ -708,15 +712,6 @@ div.error_div h2 {
     margin: 0;
 }
 
-.assay_item_sup_info {
-    color: #1465FF;
-}
-.assay_organism_info {
-    color: #000099;
-}
-.assay_strain_info {
-    color: #f93fec;
-}
 
 p.system_message {
     border: red 1px solid;
@@ -1654,3 +1649,30 @@ div.renderer {
 #snapshot-citation {
   font-size: small;
 }
+
+table#storage-stats tr,table#storage-stats td, table#storage-stats th {
+  border: 1px solid #555;
+  padding: 5px 5px;
+}
+
+table#storage-stats th.storage-name {
+  min-width: 40em;
+}
+
+table#storage-stats tr.programme-storage-stat {
+  font-style: italic;
+  font-weight: bolder;
+}
+
+table#storage-stats tr.project-storage-stat td:first-child {
+  padding-left: 2em;
+}
+
+table#storage-stats {
+  min-width: 55em;
+  border: 1px solid #222;
+}
+table#storage-stats thead {
+  font-weight: bolder;
+}
+

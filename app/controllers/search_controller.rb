@@ -14,9 +14,9 @@ class SearchController < ApplicationController
     end
 
     #strip out nils, which can occur if the index is out of sync
-    @results = @results.select{|r| !r.nil?}
-
-    @results = select_authorised @results
+    @results.compact!
+    #select only items, that can be viewed by the current_user
+    @results.select!(&:can_view?)
 
     @results_scaled = Scale.all.collect {|scale| [scale.key, @results.select {|item| !item.respond_to?(:scale_ids) or item.scale_ids.include? scale.id}]}
     @results_scaled << ['all', @results]
@@ -90,6 +90,8 @@ class SearchController < ApplicationController
         external_results = external_search downcase_query,type
         @results |= external_results
       end
+
+      @results = apply_filters(@results)
     end
 
   end
@@ -103,11 +105,6 @@ class SearchController < ApplicationController
 
   def include_external_search?
     Seek::Config.external_search_enabled && params[:include_external_search]
-  end
-
-  #Removes all results from the search results collection passed in that are not Authorised to show for the current user (if one is logged in)
-  def select_authorised collection
-    collection.select {|el| el.can_view?}
   end
 
 end

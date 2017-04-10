@@ -27,11 +27,10 @@ module Seek
           define_method "publicly_accessible_#{type_str}" do
             authorised_assets type, 'download', nil
           end
-
         end
 
         def registered_people
-          people.select { |person| person.user }
+          people.select(&:user)
         end
 
         private
@@ -49,7 +48,7 @@ module Seek
 
       def self.generate
         result = []
-        Project.all.each do |project|
+        Project.find_each do |project|
           project_stats = ProjectStats.new
           project_stats.project = project
           project_stats.people = project.people

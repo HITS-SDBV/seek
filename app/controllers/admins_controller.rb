@@ -21,9 +21,7 @@ class AdminsController < ApplicationController
     admins = admin_ids.map { |id| Person.find(id) }
     current_admins.each { |ca| ca.is_admin = false }
     admins.each { |admin| admin.is_admin = true }
-    (admins | current_admins).each do |admin|
-      admin.save!
-    end
+    (admins | current_admins).each(&:save!)
     redirect_to action: :show
   end
 
@@ -34,14 +32,14 @@ class AdminsController < ApplicationController
   end
 
   def tags
-    @tags = TextValue.all_tags.sort_by { |tag| tag.text }
+    @tags = TextValue.all_tags.sort_by(&:text)
   end
 
   def update_features_enabled
     Seek::Config.events_enabled = string_to_boolean params[:events_enabled]
     Seek::Config.email_enabled = string_to_boolean params[:email_enabled]
     Seek::Config.pdf_conversion_enabled = string_to_boolean params[:pdf_conversion_enabled]
-    #Seek::Config.delete_asset_version_enabled = string_to_boolean params[:delete_asset_version_enabled]
+    # Seek::Config.delete_asset_version_enabled = string_to_boolean params[:delete_asset_version_enabled]
     Seek::Config.show_announcements = string_to_boolean params[:show_announcements]
     Seek::Config.programmes_enabled = string_to_boolean params[:programmes_enabled]
     Seek::Config.samples_enabled = string_to_boolean params[:samples_enabled]
@@ -54,23 +52,27 @@ class AdminsController < ApplicationController
     Seek::Config.set_smtp_settings 'password', params[:smtp_password]
     Seek::Config.set_smtp_settings 'enable_starttls_auto', params[:enable_starttls_auto] == '1'
 
-    Seek::Config.support_email_address= params[:support_email_address]
+    Seek::Config.support_email_address = params[:support_email_address]
 
-    Seek::Config.omniauth_enabled       = string_to_boolean params[:omniauth_enabled]
-    Seek::Config.omniauth_user_create   = string_to_boolean params[:omniauth_user_create]
+    Seek::Config.omniauth_enabled = string_to_boolean params[:omniauth_enabled]
+    Seek::Config.omniauth_user_create = string_to_boolean params[:omniauth_user_create]
     Seek::Config.omniauth_user_activate = string_to_boolean params[:omniauth_user_activate]
 
-    Seek::Config.solr_enabled= string_to_boolean params[:solr_enabled]
-    Seek::Config.jws_enabled= string_to_boolean params[:jws_enabled]
-    Seek::Config.jws_online_root= params[:jws_online_root]
+    Seek::Config.solr_enabled = string_to_boolean params[:solr_enabled]
+    Seek::Config.jws_enabled = string_to_boolean params[:jws_enabled]
+    Seek::Config.jws_online_root = params[:jws_online_root]
 
-    Seek::Config.internal_help_enabled= string_to_boolean params[:internal_help_enabled]
-    Seek::Config.external_help_url= params[:external_help_url]
+    Seek::Config.internal_help_enabled = string_to_boolean params[:internal_help_enabled]
+    Seek::Config.external_help_url = params[:external_help_url]
 
     Seek::Config.exception_notification_recipients = params[:exception_notification_recipients]
     Seek::Config.exception_notification_enabled = string_to_boolean params[:exception_notification_enabled]
 
     Seek::Config.hide_details_enabled = string_to_boolean params[:hide_details_enabled]
+
+    Seek::Config.registration_disabled = string_to_boolean params[:registration_disabled]
+    Seek::Config.registration_disabled_description = params[:registration_disabled_description]
+
     Seek::Config.activation_required_enabled = string_to_boolean params[:activation_required_enabled]
 
     Seek::Config.google_analytics_tracker_id = params[:google_analytics_tracker_id]
@@ -93,6 +95,8 @@ class AdminsController < ApplicationController
     Seek::Config.zenodo_client_id = params[:zenodo_client_id].try(:strip)
     Seek::Config.zenodo_client_secret = params[:zenodo_client_secret].try(:strip)
 
+    Seek::Config.openbis_enabled = string_to_boolean(params[:openbis_enabled])
+
     time_lock_doi_for = params[:time_lock_doi_for]
     time_lock_is_integer = only_integer time_lock_doi_for, 'time lock doi for'
     Seek::Config.time_lock_doi_for = time_lock_doi_for.to_i if time_lock_is_integer
@@ -112,12 +116,12 @@ class AdminsController < ApplicationController
     Seek::Config.news_feed_urls = params[:news_feed_urls]
 
     entries = params[:news_number_of_entries]
-    is_entries_integer = only_integer entries, "news items"
+    is_entries_integer = only_integer entries, 'news items'
     Seek::Config.news_number_of_entries = entries if is_entries_integer
 
     Seek::Config.home_description = params[:home_description]
 
-#    Seek::Config.front_page_buttons_enabled = params[:front_page_buttons_enabled]
+    #    Seek::Config.front_page_buttons_enabled = params[:front_page_buttons_enabled]
     begin
       Seek::FeedReader.clear_cache
     rescue => e
@@ -206,8 +210,9 @@ class AdminsController < ApplicationController
     Seek::Config.recaptcha_private_key = params[:recaptcha_private_key]
     Seek::Config.recaptcha_public_key = params[:recaptcha_public_key]
     Seek::Config.default_associated_projects_access_type = params[:default_associated_projects_access_type]
-    Seek::Config.default_consortium_access_type = params[:default_consortium_access_type]
     Seek::Config.default_all_visitors_access_type = params[:default_all_visitors_access_type]
+    Seek::Config.permissions_popup = params[:permissions_popup]
+    Seek::Config.auth_lookup_update_batch_size = params[:auth_lookup_update_batch_size]
 
     Seek::Config.cache_remote_files = string_to_boolean params[:cache_remote_files]
     Seek::Config.max_cachable_size = params[:max_cachable_size]
@@ -226,11 +231,11 @@ class AdminsController < ApplicationController
 
   def restart_delayed_job
     error = nil
-    if !Rails.env.test?
+    unless Rails.env.test?
       begin
         Seek::Workers.restart
         wait_for_delayed_job_to_start
-      rescue  SystemExit => e
+      rescue SystemExit => e
         Rails.logger.info("Exit code #{e.status}")
       rescue => e
         error = e.message
@@ -297,9 +302,7 @@ class AdminsController < ApplicationController
   def delete_tag
     tag = TextValue.find(params[:id])
     if request.post?
-      tag.annotations.each do |annotation|
-        annotation.destroy
-      end
+      tag.annotations.each(&:destroy)
       tag.destroy
       flash.now[:notice] = "Tag #{tag.text} deleted"
 
@@ -313,47 +316,29 @@ class AdminsController < ApplicationController
   end
 
   def get_stats
-    collection = []
-    type = nil
-    title = nil
     @page = params[:id]
-    case @page
-      when 'contents'
-        type = 'content_stats'
-      when 'activity'
-        type = 'activity_stats'
-      when 'search'
-        type = 'search_stats'
-      when 'job_queue'
-        type = 'job_queue'
-      when 'auth_consistency'
-        type = 'auth_consistency'
-      when 'monthly_stats'
-        monthly_stats = get_monthly_stats
-        type = "monthly_statistics"
-      when "workflow_stats"
-        type = "workflow_stats"
-      when "none"
-        type = "none"
-    end
     respond_to do |format|
-      case type
-        when "content_stats"
-          format.html { render :partial => "admins/content_stats", :locals => {:stats => Seek::Stats::ContentStats.generate} }
-        when "activity_stats"
-          format.html { render :partial => "admins/activity_stats", :locals => {:stats => Seek::Stats::ActivityStats.new} }
-        when "search_stats"
-          format.html { render :partial => "admins/search_stats", :locals => {:stats => Seek::Stats::SearchStats.new} }
-        when "job_queue"
-          format.html { render :partial => "admins/job_queue" }
-        when "auth_consistency"
-          format.html { render :partial => "admins/auth_consistency" }
-        when "monthly_statistics"
-          format.html { render :partial => "admins/monthly_statistics", :locals => {:stats => monthly_stats}}
-        when "workflow_stats"
-          format.html { render :partial => "admins/workflow_stats" }
-        when "none"
-          format.html { render :text=>"" }
+      case @page
+      when 'content_stats'
+        format.html { render partial: 'admins/stats/content_stats', locals: { stats: Seek::Stats::ContentStats.generate } }
+      when 'activity_stats'
+        format.html { render partial: 'admins/stats/activity_stats', locals: { stats: Seek::Stats::ActivityStats.new } }
+      when 'search_stats'
+        format.html { render partial: 'admins/stats/search_stats', locals: { stats: Seek::Stats::SearchStats.new } }
+      when 'job_queue'
+        format.html { render partial: 'admins/stats/job_queue' }
+      when 'auth_consistency'
+        format.html { render partial: 'admins/stats/auth_consistency' }
+      when 'monthly_stats'
+        format.html { render partial: 'admins/stats/monthly_stats', locals: { stats: get_monthly_stats } }
+      when 'workflow_stats'
+        format.html { render partial: 'admins/stats/workflow_stats' }
+      when 'storage_usage_stats'
+        format.html { render partial: 'admins/stats/storage_usage_stats' }
+      when 'snapshot_and_doi_stats'
+        format.html { render partial: 'admins/stats/snapshot_and_doi_stats' }
+      when 'none'
+        format.html { render text: '' }
       end
     end
   end
@@ -366,43 +351,43 @@ class AdminsController < ApplicationController
     extra_options = {}
     @page = params[:id]
     case @page
-      when 'invalid_users_profiles'
-        partial = 'invalid_user_stats_list'
-        invalid_users = {}
-        pal_position = ProjectPosition.pal_position
-        invalid_users[:pal_mismatch] = Person.all.select { |p| p.is_pal_of_any_project? != p.project_positions.include?(pal_position) }
-        invalid_users[:duplicates] = Person.duplicates
-        invalid_users[:no_person] = User.without_profile
-        collection = invalid_users
-      when 'users_requiring_activation'
-        partial = 'user_stats_list'
-        collection = User.not_activated
-        action = "activate"
-        title = "Users have not yet activated their account"
-      when 'non_project_members'
-        partial = 'user_stats_list'
-        collection = Person.without_group.registered
-        title = "Users are not in a #{Seek::Config.project_name} #{t('project')}"
-      when "profiles_without_users"
-        partial = "user_stats_list"
-        collection = Person.userless_people
-        title = "Profiles that have no associated user"
-        extra_options = {:action=>"delete",:bulk_delete=>false}
-      when 'pals'
-        partial = 'user_stats_list'
-        collection = Person.pals
-        title = 'List of PALs'
-      when 'administrators'
-        partial = 'admin_selection'
-      when "none"
-        partial = "none"
+    when 'invalid_users_profiles'
+      partial = 'invalid_user_stats_list'
+      invalid_users = {}
+      pal_position = ProjectPosition.pal_position
+      invalid_users[:pal_mismatch] = Person.all.select { |p| p.is_pal_of_any_project? != p.project_positions.include?(pal_position) }
+      invalid_users[:duplicates] = Person.duplicates
+      invalid_users[:no_person] = User.without_profile
+      collection = invalid_users
+    when 'users_requiring_activation'
+      partial = 'user_stats_list'
+      collection = User.not_activated
+      action = 'activate'
+      title = 'Users have not yet activated their account'
+    when 'non_project_members'
+      partial = 'user_stats_list'
+      collection = Person.without_group.registered
+      title = "Users are not in a #{Seek::Config.project_name} #{t('project')}"
+    when 'profiles_without_users'
+      partial = 'user_stats_list'
+      collection = Person.userless_people
+      title = 'Profiles that have no associated user'
+      extra_options = { action: 'delete', bulk_delete: false }
+    when 'pals'
+      partial = 'user_stats_list'
+      collection = Person.pals
+      title = 'List of PALs'
+    when 'administrators'
+      partial = 'admin_selection'
+    when 'none'
+      partial = 'none'
     end
     respond_to do |format|
-      if partial == "none"
-        format.html { render :text=>"" }
+      if partial == 'none'
+        format.html { render text: '' }
       else
-        locals = {:collection => collection, :action => action, :title => title}.merge(extra_options)
-        format.html { render :partial => partial, :locals => locals }
+        locals = { collection: collection, action: action, title: title }.merge(extra_options)
+        format.html { render partial: partial, locals: locals }
       end
     end
   end
@@ -415,8 +400,8 @@ class AdminsController < ApplicationController
       time_range = (x.month.ago.beginning_of_month.to_date..x.month.ago.end_of_month.to_date)
       registrations = User.where(created_at: time_range).count
       active_users = 0
-      User.all.each do |user|
-        active_users = active_users + 1 unless user.taverna_player_runs.where(created_at: time_range, saved_state: 'finished').empty?
+      User.find_each do |user|
+        active_users += 1 unless user.taverna_player_runs.where(created_at: time_range, saved_state: 'finished').empty?
       end
       complete_runs = TavernaPlayer::Run.where(created_at: time_range, saved_state: 'finished').count
       stats[x.month.ago.beginning_of_month.to_i] = [registrations, active_users, complete_runs]
@@ -436,31 +421,31 @@ class AdminsController < ApplicationController
     ActionMailer::Base.smtp_settings = smtp_hash_new
     raise_delivery_errors_setting = ActionMailer::Base.raise_delivery_errors
     ActionMailer::Base.raise_delivery_errors = true
-        begin
-          Mailer.test_email(params[:testing_email]).deliver
-          render :update do |page|
-            page.replace_html 'ajax_loader_position', "<div id='ajax_loader_position'></div>"
-            page.alert("test email is sent successfully to #{params[:testing_email]}")
-          end
-        rescue => e
-          render :update do |page|
-            page.replace_html 'ajax_loader_position', "<div id='ajax_loader_position'></div>"
-            page.alert("Fail to send test email, #{e.message}")
-          end
-        ensure
-          ActionMailer::Base.smtp_settings = smtp_hash_old
-          ActionMailer::Base.raise_delivery_errors = raise_delivery_errors_setting
-        end
+    begin
+      Mailer.test_email(params[:testing_email]).deliver
+      render :update do |page|
+        page.replace_html 'ajax_loader_position', "<div id='ajax_loader_position'></div>"
+        page.alert("test email is sent successfully to #{params[:testing_email]}")
+      end
+    rescue => e
+      render :update do |page|
+        page.replace_html 'ajax_loader_position', "<div id='ajax_loader_position'></div>"
+        page.alert("Fail to send test email, #{e.message}")
+      end
+    ensure
+      ActionMailer::Base.smtp_settings = smtp_hash_old
+      ActionMailer::Base.raise_delivery_errors = raise_delivery_errors_setting
+    end
   end
 
   def header_image_file
     if params[:header_image_file]
       file_io = params[:header_image_file]
-      avatar = Avatar.new(:original_filename=>file_io.original_filename,:image_file=>file_io,:skip_owner_validation=>true)
+      avatar = Avatar.new(original_filename: file_io.original_filename, image_file: file_io, skip_owner_validation: true)
       if avatar.save
         Seek::Config.header_image_avatar_id = avatar.id
       else
-        flash[:error]="There was an error updating the header image logo! There could be a problem with the image file. Please try again or try another image."
+        flash[:error] = 'There was an error updating the header image logo! There could be a problem with the image file. Please try again or try another image.'
       end
     end
   end
@@ -481,7 +466,7 @@ class AdminsController < ApplicationController
       x[day] += 1
     end
     sorted_keys = x.keys.sort
-    (sorted_keys.first..sorted_keys.last).map { |i| x[i].nil? ? 0 : x[i]  }
+    (sorted_keys.first..sorted_keys.last).map { |i| x[i].nil? ? 0 : x[i] }
   end
 
   def check_valid_email(email_address, field)
@@ -494,23 +479,23 @@ class AdminsController < ApplicationController
   end
 
   def only_integer(input, field)
-     Integer(input)
-     return true
-   rescue
-     flash[:error] = "Please enter a valid number for the #{field}"
-     return false
+    Integer(input)
+    return true
+  rescue
+    flash[:error] = "Please enter a valid number for the #{field}"
+    return false
   end
 
   def only_positive_integer(input, field)
-     if Integer(input) > 0
-       return true
-     else
-       flash[:error] = "Please enter a valid positive number for the #{field}"
-       return false
-     end
-   rescue
-     flash[:error] = "Please enter a valid positive number for the #{field}"
-     return false
+    if Integer(input) > 0
+      return true
+    else
+      flash[:error] = "Please enter a valid positive number for the #{field}"
+      return false
+    end
+  rescue
+    flash[:error] = "Please enter a valid positive number for the #{field}"
+    return false
   end
 
   def string_to_boolean(string)
@@ -540,7 +525,7 @@ class AdminsController < ApplicationController
     rescue Cocaine::CommandNotFoundError => e
       return 'The command to restart the background tasks could not be found!'
     rescue => e
-      error =  e.message
+      error = e.message
       return error
     end
   end

@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20161011101739) do
+ActiveRecord::Schema.define(:version => 20170321115012) do
 
   create_table "activity_logs", :force => true do |t|
     t.string   "action"
@@ -939,6 +939,21 @@ ActiveRecord::Schema.define(:version => 20161011101739) do
 
   add_index "oauth_sessions", ["user_id"], :name => "index_oauth_sessions_on_user_id"
 
+  create_table "openbis_endpoints", :force => true do |t|
+    t.string   "as_endpoint"
+    t.string   "space_perm_id"
+    t.string   "username"
+    t.integer  "project_id"
+    t.datetime "created_at",                             :null => false
+    t.datetime "updated_at",                             :null => false
+    t.string   "dss_endpoint"
+    t.string   "web_endpoint"
+    t.integer  "refresh_period_mins",   :default => 120
+    t.integer  "policy_id"
+    t.string   "encrypted_password"
+    t.string   "encrypted_password_iv"
+  end
+
   create_table "organisms", :force => true do |t|
     t.string   "title"
     t.datetime "created_at"
@@ -1139,7 +1154,7 @@ ActiveRecord::Schema.define(:version => 20161011101739) do
     t.text     "description"
     t.integer  "avatar_id"
     t.integer  "default_policy_id"
-    t.string   "first_letter",      :limit => 1
+    t.string   "first_letter",       :limit => 1
     t.string   "site_credentials"
     t.string   "site_root_uri"
     t.datetime "last_jerm_run"
@@ -1147,7 +1162,8 @@ ActiveRecord::Schema.define(:version => 20161011101739) do
     t.integer  "programme_id"
     t.integer  "ancestor_id"
     t.integer  "parent_id"
-    t.string   "default_license"
+    t.string   "default_license",                 :default => "CC-BY-4.0"
+    t.boolean  "use_default_policy",              :default => false
   end
 
   create_table "projects_publications", :id => false, :force => true do |t|
@@ -1218,13 +1234,6 @@ ActiveRecord::Schema.define(:version => 20161011101739) do
 
   add_index "publication_auth_lookup", ["user_id", "asset_id", "can_view"], :name => "index_pub_user_id_asset_id_can_view"
   add_index "publication_auth_lookup", ["user_id", "can_view"], :name => "index_publication_auth_lookup_on_user_id_and_can_view"
-
-  create_table "publication_author_orders", :force => true do |t|
-    t.integer "order"
-    t.integer "author_id"
-    t.string  "author_type"
-    t.integer "publication_id"
-  end
 
   create_table "publication_authors", :force => true do |t|
     t.string   "first_name"
@@ -1305,8 +1314,9 @@ ActiveRecord::Schema.define(:version => 20161011101739) do
     t.string   "title"
     t.string   "base_type"
     t.text     "regexp"
-    t.datetime "created_at", :null => false
-    t.datetime "updated_at", :null => false
+    t.datetime "created_at",  :null => false
+    t.datetime "updated_at",  :null => false
+    t.string   "placeholder"
   end
 
   create_table "sample_attributes", :force => true do |t|
@@ -1356,12 +1366,20 @@ ActiveRecord::Schema.define(:version => 20161011101739) do
     t.string   "first_letter", :limit => 1
   end
 
+  create_table "sample_resource_links", :force => true do |t|
+    t.integer "sample_id"
+    t.integer "resource_id"
+    t.string  "resource_type"
+  end
+
+  add_index "sample_resource_links", ["resource_id", "resource_type"], :name => "index_sample_resource_links_on_resource_id_and_resource_type"
+  add_index "sample_resource_links", ["sample_id"], :name => "index_sample_resource_links_on_sample_id"
+
   create_table "sample_types", :force => true do |t|
     t.string   "title"
     t.string   "uuid"
     t.datetime "created_at",                                        :null => false
     t.datetime "updated_at",                                        :null => false
-    t.integer  "content_blob_id"
     t.string   "first_letter",      :limit => 1
     t.text     "description"
     t.boolean  "uploaded_template",              :default => false

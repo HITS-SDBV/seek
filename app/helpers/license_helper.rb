@@ -26,15 +26,17 @@ module LicenseHelper
   # whether to enable to auto selection of the license based on the selected project
   # only enabled if it is a new item, and the logged in person belongs to projects with a default license
   def enable_auto_project_license?
-    resource_for_controller &&
-      resource_for_controller.new_record? &&
-      logged_in_and_registered? &&
-      current_user.person.projects.select(&:default_license).any?
+    resource_for_controller.try(:new_record?) && logged_in_and_registered? &&
+      default_license_for_current_user
   end
 
-  #JSON that creates a lookup for project license by id
+  def default_license_for_current_user
+    current_user.person.projects_with_default_license.any?
+  end
+
+  # JSON that creates a lookup for project license by id
   def project_licenses_json
-    projects = current_user.person.projects.select(&:default_license)
+    projects = current_user.person.projects_with_default_license
     Hash[projects.collect { |proj| [proj.id, proj.default_license] }].to_json.html_safe
   end
 
@@ -49,7 +51,30 @@ module LicenseHelper
   end
 
   def grouped_license_options(opts = {})
-    grouped_licenses = license_values(opts).group_by do |l|
+    grouped_licenses = sort_grouped_licenses(group_licenses(opts))
+
+    grouped_licenses.each do |_, licenses|
+      licenses.map! { |value| [value['title'], value['id'], { 'data-url' => value['url'] }] }
+    end
+
+    grouped_licenses
+  end
+
+  def sort_grouped_licenses(licenses)
+    licenses.sort_by do |pair|
+      case pair[0]
+      when 'Recommended'
+        0
+      when 'Generic'
+        1
+      else
+        2
+      end
+    end
+  end
+
+  def group_licenses(opts)
+    license_values(opts).group_by do |l|
       if l.key?('is_generic') && l['is_generic']
         'Generic'
       elsif l.key?('od_recommended') && l['od_recommended']
@@ -57,21 +82,6 @@ module LicenseHelper
       else
         'Other'
       end
-    end.to_a.sort_by do |pair|
-      case pair[0]
-        when 'Recommended'
-          0
-        when 'Generic'
-          1
-        else
-          2
-      end
-    end
-
-    grouped_licenses.each do |_, licenses|
-      licenses.map! { |value| [value['title'], value['id'], { 'data-url' => value['url'] }] }
-    end
-
-    grouped_licenses
+    end.to_a
   end
 end

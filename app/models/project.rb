@@ -26,16 +26,22 @@ class Project < ActiveRecord::Base
   has_and_belongs_to_many :strains
   has_and_belongs_to_many :organisms
   has_and_belongs_to_many :samples
+  has_and_belongs_to_many :sample_types
 
   has_many :work_groups, dependent: :destroy
   has_many :institutions, through: :work_groups, before_remove: :group_memberships_empty?
+  has_many :group_memberships, through: :work_groups
+  # OVERRIDDEN in Seek::ProjectHierarchy if Seek::Config.project_hierarchy_enabled
+  has_many :people, through: :group_memberships, order: 'last_name ASC', uniq: true
 
   has_many :admin_defined_role_projects
+
+  has_many :openbis_endpoints
 
   belongs_to :programme
 
   attr_accessible :project_administrator_ids, :asset_gatekeeper_ids, :pal_ids, :asset_housekeeper_ids, :title, :programme_id, :description,
-                  :web_page, :institution_ids, :parent_id, :wiki_page, :organism_ids, :default_license
+                  :web_page, :institution_ids, :parent_id, :wiki_page, :organism_ids, :default_license, :use_default_policy
 
   # for handling the assignment for roles
   attr_accessor :project_administrator_ids, :asset_gatekeeper_ids, :pal_ids, :asset_housekeeper_ids
@@ -70,20 +76,7 @@ class Project < ActiveRecord::Base
   #  necessary, deep copies of it will be made to ensure that all settings get
   #  fully copied and assigned to belong to owners of assets, where identical policy
   #  is to be used)
-  belongs_to :default_policy,
-             class_name: 'Policy',
-             dependent: :destroy,
-             autosave: true
-
-  after_initialize :default_default_policy_if_new
-
-  def default_default_policy_if_new
-    unless Seek::Config.is_virtualliver
-      self.default_policy = Policy.default if new_record?
-    else
-      self.default_policy = Policy.private_policy if new_record?
-    end
-  end
+  belongs_to :default_policy, class_name: 'Policy', dependent: :destroy, autosave: true
 
   def group_memberships_empty?(institution)
     work_group = WorkGroup.where(['project_id=? AND institution_id=?', id, institution.id]).first
@@ -153,14 +146,6 @@ class Project < ActiveRecord::Base
     # infer all project's locations from the institutions where the person is member of
     locations = institutions.collect(&:country).select { |l| !l.blank? }
     locations
-  end
-
-  # OVERRIDDEN in Seek::ProjectHierarchy if Seek::Config.project_hierarchy_enabled
-  def people
-    # TODO: look into doing this with a scope or direct query
-    res = work_groups.collect(&:people).flatten.uniq.compact
-    # TODO: write a test to check they are ordered
-    res.sort_by { |a| (a.last_name.blank? ? a.name : a.last_name) }
   end
 
   def studies
