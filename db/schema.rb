@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20161213105545) do
+ActiveRecord::Schema.define(:version => 20170321115012) do
 
   create_table "activity_logs", :force => true do |t|
     t.string   "action"
@@ -939,6 +939,21 @@ ActiveRecord::Schema.define(:version => 20161213105545) do
 
   add_index "oauth_sessions", ["user_id"], :name => "index_oauth_sessions_on_user_id"
 
+  create_table "openbis_endpoints", :force => true do |t|
+    t.string   "as_endpoint"
+    t.string   "space_perm_id"
+    t.string   "username"
+    t.integer  "project_id"
+    t.datetime "created_at",                             :null => false
+    t.datetime "updated_at",                             :null => false
+    t.string   "dss_endpoint"
+    t.string   "web_endpoint"
+    t.integer  "refresh_period_mins",   :default => 120
+    t.integer  "policy_id"
+    t.string   "encrypted_password"
+    t.string   "encrypted_password_iv"
+  end
+
   create_table "organisms", :force => true do |t|
     t.string   "title"
     t.datetime "created_at"
@@ -1139,7 +1154,7 @@ ActiveRecord::Schema.define(:version => 20161213105545) do
     t.text     "description"
     t.integer  "avatar_id"
     t.integer  "default_policy_id"
-    t.string   "first_letter",      :limit => 1
+    t.string   "first_letter",       :limit => 1
     t.string   "site_credentials"
     t.string   "site_root_uri"
     t.datetime "last_jerm_run"
@@ -1147,7 +1162,8 @@ ActiveRecord::Schema.define(:version => 20161213105545) do
     t.integer  "programme_id"
     t.integer  "ancestor_id"
     t.integer  "parent_id"
-    t.string   "default_license"
+    t.string   "default_license",                 :default => "CC-BY-4.0"
+    t.boolean  "use_default_policy",              :default => false
   end
 
   create_table "projects_publications", :id => false, :force => true do |t|

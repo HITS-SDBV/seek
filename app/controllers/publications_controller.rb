@@ -52,7 +52,7 @@ class PublicationsController < ApplicationController
     @publication.parent_name = params[:parent_name]
     respond_to do |format|
       format.html # new.html.erb
-      format.xml 
+      format.xml
     end
   end
 
@@ -89,7 +89,7 @@ class PublicationsController < ApplicationController
       register_publication
     when "Create" # Create publication from all fields
       create_publication
-    end 
+    end
   end
 
   # PUT /publications/1
@@ -135,15 +135,15 @@ class PublicationsController < ApplicationController
 
         #Create policy if not present (should be)
         if @publication.policy.nil?
-          @publication.policy = Policy.create(:name => "publication_policy", :sharing_scope => Policy::EVERYONE, :access_type => Policy::VISIBLE)
+          @publication.policy = Policy.create(:name => "publication_policy", :access_type => Policy::VISIBLE)
           @publication.save
         end
-        
+
         #Update policy so current authors have manage permissions
         @publication.creators.each do |author|
           @publication.policy.permissions.clear
           @publication.policy.permissions << Permission.create(:contributor => author, :policy => @publication.policy, :access_type => Policy::MANAGING)
-        end      
+        end
         #Add contributor
         @publication.policy.permissions << Permission.create(:contributor => @publication.contributor.person, :policy => @publication.policy, :access_type => Policy::MANAGING)
 
@@ -271,7 +271,7 @@ class PublicationsController < ApplicationController
                                .select([:person_id, :first_name, :last_name])
                                .group( :person_id, :first_name, :last_name, :author_index)
                                .count
-                               .collect { 
+                               .collect {
       |groups, count| {
         :person_id => groups[0],
         :first_name => groups[1],
@@ -287,7 +287,7 @@ class PublicationsController < ApplicationController
       format.xml  { render :xml  => authors }
     end
   end
-  
+
   #Try and relate non_seek_authors to people in SEEK based on name and project
   def associate_authors
     publication = @publication
@@ -300,15 +300,15 @@ class PublicationsController < ApplicationController
         association[author.id] = author.person
       end
     end
-    
+
     @author_associations = association
   end
-  
+
   def disassociate_authors
     @publication = Publication.find(params[:id])
     @publication.creators.clear #get rid of author links
     @publication.publication_authors.clear
-    
+
     #Query pubmed article to fetch authors
     result = fetch_pubmed_or_doi_result @publication.pubmed_id, @publication.doi
 
@@ -345,10 +345,20 @@ class PublicationsController < ApplicationController
       end
     elsif doi
       begin
-        query = DoiQuery.new(Seek::Config.crossref_api_email)
+        query = DOI::Query.new(Seek::Config.crossref_api_email)
         result = query.fetch(doi)
+        if result.blank?
+          @error = "Unable to get result"
+        end
+        if result.title.blank?
+          @error = "Unable to get DOI"
+        end
+      rescue DOI::MalformedDOIException
+        @error = 'The DOI you entered appears to be malformed.'
+      rescue DOI::NotFoundException
+        @error = 'The DOI you entered could not be resolved.'
       rescue RuntimeError => exception
-        @error = "There was an problem contacting the DOI query service. Please try again later"
+        @error = 'There was an problem contacting the DOI query service. Please try again later'
         if Seek::Config.exception_notification_enabled
           ExceptionNotifier.notify_exception(exception,:data=>{:message=>"Problem accessing crossref using DOI #{doi}"})
         end

@@ -22,12 +22,12 @@ class ContentBlobsControllerTest < ActionController::TestCase
     assert_not_nil flash[:error]
   end
 
-  test "examine url to file" do
-    #test successful request to file
-    stub_request(:head, "http://mockedlocation.com/a-piccy.png").to_return(:status => 200, :headers=>{'Content-Type' => 'image/png'})
-    xml_http_request :get, :examine_url, :data_url=>"http://mockedlocation.com/a-piccy.png"
+  test 'examine url to file' do
+    # test successful request to file
+    stub_request(:head, 'http://mockedlocation.com/a-piccy.png').to_return(status: 200, headers: { 'Content-Type' => 'image/png' })
+    xml_http_request :get, :examine_url, data_url: 'http://mockedlocation.com/a-piccy.png'
     assert_response :success
-    assert !@response.body.include?("This is a webpage")
+    assert !@response.body.include?('This is a webpage')
     refute @response.body.include?('disallow_copy_option();')
     refute assigns(:error)
     refute assigns(:error_msg)
@@ -35,12 +35,12 @@ class ContentBlobsControllerTest < ActionController::TestCase
     refute assigns(:is_webpage)
   end
 
-  test "examine url to webpage" do
-    #successful request to webpage
-    stub_request(:any, "http://somewhere.com").to_return(:body => "", :status => 200, :headers=>{'Content-Type' => 'text/html'})
-    xml_http_request :get, :examine_url, :data_url=>"http://somewhere.com"
+  test 'examine url to webpage' do
+    # successful request to webpage
+    stub_request(:any, 'http://somewhere.com').to_return(body: '', status: 200, headers: { 'Content-Type' => 'text/html' })
+    xml_http_request :get, :examine_url, data_url: 'http://somewhere.com'
     assert_response :success
-    assert @response.body.include?("This is a webpage")
+    assert @response.body.include?('This is a webpage')
     assert @response.body.include?('disallow_copy_option();')
     refute assigns(:error)
     refute assigns(:error_msg)
@@ -48,69 +48,69 @@ class ContentBlobsControllerTest < ActionController::TestCase
     assert assigns(:is_webpage)
   end
 
-  test "examine url forbidden" do
-    #forbidden
-    stub_request(:head, "http://unauth.com/file.pdf").to_return(:status => 403, :headers=>{'Content-Type' => 'application/pdf'})
-    xml_http_request :get, :examine_url, :data_url=>"http://unauth.com/file.pdf"
+  test 'examine url forbidden' do
+    # forbidden
+    stub_request(:head, 'http://unauth.com/file.pdf').to_return(status: 403, headers: { 'Content-Type' => 'application/pdf' })
+    xml_http_request :get, :examine_url, data_url: 'http://unauth.com/file.pdf'
     assert_response :success
-    assert @response.body.include?("Access to this link is unauthorized")
+    assert @response.body.include?('Access to this link is unauthorized')
     assert @response.body.include?('disallow_copy_option();')
     refute assigns(:error)
     refute assigns(:error_msg)
     assert assigns(:unauthorized)
   end
 
-  test "examine url unauthorized" do
-    #unauthorized
-    stub_request(:head, "http://unauth.com/file.pdf").to_return(:status => 401, :headers=>{'Content-Type' => 'application/pdf'})
-    xml_http_request :get, :examine_url, :data_url=>"http://unauth.com/file.pdf"
+  test 'examine url unauthorized' do
+    # unauthorized
+    stub_request(:head, 'http://unauth.com/file.pdf').to_return(status: 401, headers: { 'Content-Type' => 'application/pdf' })
+    xml_http_request :get, :examine_url, data_url: 'http://unauth.com/file.pdf'
     assert_response :success
-    assert @response.body.include?("Access to this link is unauthorized")
+    assert @response.body.include?('Access to this link is unauthorized')
     assert @response.body.include?('disallow_copy_option();')
     refute assigns(:error)
     refute assigns(:error_msg)
     assert assigns(:unauthorized)
   end
 
-  test "examine url 404" do
-    #404
-    stub_request(:head, "http://missing.com").to_return(:status => 404, :headers=>{'Content-Type' => 'text/html'})
-    xml_http_request :get, :examine_url, :data_url=>"http://missing.com"
+  test 'examine url 404' do
+    # 404
+    stub_request(:head, 'http://missing.com').to_return(status: 404, headers: { 'Content-Type' => 'text/html' })
+    xml_http_request :get, :examine_url, data_url: 'http://missing.com'
     assert_response :success
-    assert @response.body.include?("Nothing can be found at that URL")
+    assert @response.body.include?('Nothing can be found at that URL')
     assert @response.body.include?('disallow_copy_option();')
     assert assigns(:error)
     assert assigns(:error_msg)
     refute assigns(:unauthorized)
   end
 
-  test "examine url host not found" do
-    #doesn't exist
-    stub_request(:head, "http://nohost.com").to_raise(SocketError)
-    xml_http_request :get, :examine_url, :data_url=>"http://nohost.com"
+  test 'examine url host not found' do
+    # doesn't exist
+    stub_request(:head, 'http://nohost.com').to_raise(SocketError)
+    xml_http_request :get, :examine_url, data_url: 'http://nohost.com'
     assert_response :success
-    assert @response.body.include?("Nothing can be found at that URL")
+    assert @response.body.include?('Nothing can be found at that URL')
     assert @response.body.include?('disallow_copy_option();')
     assert assigns(:error)
     assert assigns(:error_msg)
     refute assigns(:unauthorized)
   end
 
-  test "examine url bad uri" do
-    #bad uri
-    xml_http_request :get, :examine_url, :data_url=>"this is not a uri"
+  test 'examine url bad uri' do
+    # bad uri
+    xml_http_request :get, :examine_url, data_url: 'this is not a uri'
     assert_response :success
-    assert @response.body.include?("The URL appears to be invalid")
+    assert @response.body.include?('The URL appears to be invalid')
     assert @response.body.include?('disallow_copy_option();')
     assert assigns(:error)
     assert assigns(:error_msg)
     refute assigns(:unauthorized)
   end
 
-  test "examine url unrecognized scheme" do
-    xml_http_request :get, :examine_url, :data_url=>"fish://tuna:1525125151"
+  test 'examine url unrecognized scheme' do
+    xml_http_request :get, :examine_url, data_url: 'fish://tuna:1525125151'
     assert_response :success
-    assert @response.body.include?("Unhandled URL scheme")
+    assert @response.body.include?('Unhandled URL scheme')
     assert @response.body.include?('disallow_copy_option();')
     assert assigns(:warning)
     assert assigns(:warning_msg)
@@ -189,8 +189,8 @@ class ContentBlobsControllerTest < ActionController::TestCase
   test 'get_pdf from url' do
     mock_remote_file "#{Rails.root}/test/fixtures/files/a_pdf_file.pdf",
                      'http://somewhere.com/piccy.pdf',
-                     { 'Content-Type' => 'application/pdf',
-                       'Content-Length' => 500 }
+                     'Content-Type' => 'application/pdf',
+                     'Content-Length' => 500
     pdf_sop = Factory(:sop,
                       policy: Factory(:all_sysmo_downloadable_policy),
                       content_blob: Factory(:pdf_content_blob,
@@ -200,7 +200,7 @@ class ContentBlobsControllerTest < ActionController::TestCase
     assert !pdf_sop.content_blob.file_exists?
     assert pdf_sop.content_blob.cachable?
 
-    with_config_value(:hard_max_cachable_size, 10000) do # Temporarily increase this, as the PDF is ~8kB
+    with_config_value(:hard_max_cachable_size, 10_000) do # Temporarily increase this, as the PDF is ~8kB
       get :get_pdf, sop_id: pdf_sop.id, id: pdf_sop.content_blob.id
     end
 
@@ -218,15 +218,15 @@ class ContentBlobsControllerTest < ActionController::TestCase
     check_for_soffice
     mock_remote_file "#{Rails.root}/test/fixtures/files/ms_word_test.doc",
                      'http://somewhere.com/piccy.doc',
-                     { 'Content-Type' => 'application/pdf',
-                       'Content-Length' => 500 }
+                     'Content-Type' => 'application/pdf',
+                     'Content-Length' => 500
     doc_sop = Factory(:sop,
                       policy: Factory(:all_sysmo_downloadable_policy),
                       content_blob: Factory(:doc_content_blob,
                                             data: nil,
                                             url: 'http://somewhere.com/piccy.doc',
                                             uuid: UUID.generate))
-    with_config_value(:hard_max_cachable_size, 10000) do # Temporarily increase this, as the PDF is ~9kB
+    with_config_value(:hard_max_cachable_size, 10_000) do # Temporarily increase this, as the PDF is ~9kB
       get :get_pdf, sop_id: doc_sop.id, id: doc_sop.content_blob.id
     end
     assert_response :success
@@ -240,7 +240,7 @@ class ContentBlobsControllerTest < ActionController::TestCase
   end
 
   test 'should gracefully handle view_pdf for non existing asset' do
-    stub_request(:head, "http://somewhere.com/piccy.doc").to_return(:status=>404)
+    stub_request(:head, 'http://somewhere.com/piccy.doc').to_return(status: 404)
     sop = Factory(:sop,
                   policy: Factory(:all_sysmo_downloadable_policy),
                   content_blob: Factory(:doc_content_blob,
@@ -251,17 +251,16 @@ class ContentBlobsControllerTest < ActionController::TestCase
     get :get_pdf, sop_id: 999, id: blob.id
     assert_redirected_to root_path
     assert_not_nil flash[:error]
-
   end
 
   test 'report error when file unavailable for download' do
     df = Factory :data_file, policy: Factory(:public_policy)
-    df.content_blobs.first.dump_data_to_file
-    assert df.content_blobs.first.file_exists?
-    FileUtils.rm df.content_blobs.first.filepath
-    refute df.content_blobs.first.file_exists?
+    df.content_blob.dump_data_to_file
+    assert df.content_blob.file_exists?
+    FileUtils.rm df.content_blob.filepath
+    refute df.content_blob.file_exists?
 
-    get :download, data_file_id: df, id: df.content_blobs.first
+    get :download, data_file_id: df, id: df.content_blob
 
     assert_redirected_to df
     assert flash[:error].match(/Unable to find a copy of the file for download/)
@@ -296,10 +295,12 @@ class ContentBlobsControllerTest < ActionController::TestCase
     al = ActivityLog.last
     assert_equal 'inline_view', al.action
 
-    df = Factory(:data_file, policy: Factory(:all_sysmo_downloadable_policy))
-    image_content_blob = Factory(:content_blob, :original_filename => 'test.png', :content_type => 'image/png', :asset => df)
+    df = Factory(:data_file, policy: Factory(:all_sysmo_downloadable_policy),
+                             content_blob: Factory(:image_content_blob,
+                                                   original_filename: 'test.png',
+                                                   content_type: 'image/png'))
     assert_difference('ActivityLog.count') do
-      get :download, data_file_id: df.id, id: df.content_blobs.first.id, disposition: 'inline'
+      get :download, data_file_id: df.id, id: df.content_blob.id, disposition: 'inline'
     end
     assert_response :success
     al = ActivityLog.last
@@ -307,49 +308,58 @@ class ContentBlobsControllerTest < ActionController::TestCase
   end
 
   test 'should view content as correct format for type' do
-    df = Factory(:data_file,content_blobs:[Factory(:csv_content_blob)],policy: Factory(:all_sysmo_downloadable_policy))
-    get :view_content,data_file_id:df.id, id:df.content_blobs.first.id
+    df = Factory(:data_file, content_blob: Factory(:csv_content_blob), policy: Factory(:all_sysmo_downloadable_policy))
+    get :view_content, data_file_id: df.id, id: df.content_blob.id
     assert_response :success
     assert @response.body.include?('1,2,3,4,5')
-    assert_equal 'text/plain',@response.content_type
+    assert_equal 'text/plain', @response.content_type
 
-    df = Factory(:data_file,content_blobs:[Factory(:doc_content_blob)],policy: Factory(:all_sysmo_downloadable_policy))
-    get :view_content,data_file_id:df.id, id:df.content_blobs.first.id
+    df = Factory(:data_file, content_blob: Factory(:doc_content_blob), policy: Factory(:all_sysmo_downloadable_policy))
+    get :view_content, data_file_id: df.id, id: df.content_blob.id
     assert_response :success
-    assert_equal 'text/html',@response.content_type
+    assert_equal 'text/html', @response.content_type
+  end
+
+  test 'can view content of an image file' do
+    df = Factory(:data_file, policy: Factory(:all_sysmo_downloadable_policy),
+                             content_blob: Factory(:image_content_blob))
+
+    get :download, data_file_id: df.id, id: df.content_blob.id, disposition: 'inline', image_size: '900'
+
+    assert_response :success
   end
 
   test 'should transparently redirect on download for 302 url' do
     mock_http
-    df  = Factory :data_file,
-                  policy: Factory(:all_sysmo_downloadable_policy),
-                  content_blobs: [Factory(:url_content_blob,
-                                        url: 'http://mocked302.com',
-                                        uuid: UUID.generate)]
-    assert !df.content_blobs.first.file_exists?
+    df = Factory :data_file,
+                 policy: Factory(:all_sysmo_downloadable_policy),
+                 content_blob: Factory(:url_content_blob,
+                                       url: 'http://mocked302.com',
+                                       uuid: UUID.generate)
+    assert !df.content_blob.file_exists?
 
-    get :download, data_file_id: df, id: df.content_blobs.first
+    get :download, data_file_id: df, id: df.content_blob
     assert_response :success
   end
 
   test 'should redirect on download for 401 url' do
     mock_http
-    df  = Factory :data_file,
-                  policy: Factory(:all_sysmo_downloadable_policy),
-                  content_blobs: [Factory(:url_content_blob,
-                                        url: 'http://mocked401.com',
-                                        uuid: UUID.generate)]
-    assert !df.content_blobs.first.file_exists?
+    df = Factory :data_file,
+                 policy: Factory(:all_sysmo_downloadable_policy),
+                 content_blob: Factory(:url_content_blob,
+                                       url: 'http://mocked401.com',
+                                       uuid: UUID.generate)
+    assert !df.content_blob.file_exists?
 
-    get :download, data_file_id: df, id: df.content_blobs.first
+    get :download, data_file_id: df, id: df.content_blob
 
-    assert_redirected_to df.content_blobs.first.url
+    assert_redirected_to df.content_blob.url
   end
 
   test 'should download' do
     df = Factory :small_test_spreadsheet_datafile, policy: Factory(:public_policy), contributor: User.current_user
     assert_difference('ActivityLog.count') do
-      get :download, data_file_id: df, id: df.content_blobs.first
+      get :download, data_file_id: df, id: df.content_blob
     end
     assert_response :success
     assert_equal "attachment; filename=\"small-test-spreadsheet.xls\"", @response.header['Content-Disposition']
@@ -360,20 +370,20 @@ class ContentBlobsControllerTest < ActionController::TestCase
   test 'should not log download for inline view intent' do
     df = Factory :small_test_spreadsheet_datafile, policy: Factory(:public_policy), contributor: User.current_user
     assert_no_difference('ActivityLog.count') do
-      get :download, data_file_id: df, id: df.content_blobs.first, intent: :inline_view
+      get :download, data_file_id: df, id: df.content_blob, intent: :inline_view
     end
     assert_response :success
   end
 
   test 'should download from url' do
     mock_http
-    df  = Factory :data_file,
-                  policy: Factory(:all_sysmo_downloadable_policy),
-                  content_blobs: [Factory(:url_content_blob,
-                                        url: 'http://mockedlocation.com/a-piccy.png',
-                                        uuid: UUID.generate)]
+    df = Factory :data_file,
+                 policy: Factory(:all_sysmo_downloadable_policy),
+                 content_blob: Factory(:url_content_blob,
+                                       url: 'http://mockedlocation.com/a-piccy.png',
+                                       uuid: UUID.generate)
     assert_difference('ActivityLog.count') do
-      get :download, data_file_id: df, id: df.content_blobs.first
+      get :download, data_file_id: df, id: df.content_blob
     end
     assert_response :success
   end
@@ -382,11 +392,11 @@ class ContentBlobsControllerTest < ActionController::TestCase
     mock_http
     df  = Factory :data_file,
                   policy: Factory(:all_sysmo_downloadable_policy),
-                  content_blobs: [Factory(:url_content_blob,
+                  content_blob: Factory(:url_content_blob,
                                         url: 'http://unknownhost.com/pic.png',
-                                        uuid: UUID.generate)]
+                                        uuid: UUID.generate)
 
-    get :download, data_file_id: df, id: df.content_blobs.first
+    get :download, data_file_id: df, id: df.content_blob
 
     assert_redirected_to data_file_path(df, version: df.version)
     assert_not_nil flash[:error]
@@ -396,11 +406,11 @@ class ContentBlobsControllerTest < ActionController::TestCase
     mock_http
     df  = Factory :data_file,
                   policy: Factory(:all_sysmo_downloadable_policy),
-                  content_blobs: [Factory(:url_content_blob,
+                  content_blob: Factory(:url_content_blob,
                                         url: 'http://mocked404.com',
-                                        uuid: UUID.generate)]
+                                        uuid: UUID.generate)
 
-    get :download, data_file_id: df, id: df.content_blobs.first
+    get :download, data_file_id: df, id: df.content_blob
     assert_redirected_to data_file_path(df, version: df.version)
     assert_not_nil flash[:error]
   end
@@ -408,10 +418,10 @@ class ContentBlobsControllerTest < ActionController::TestCase
   test 'should handle inline download when specify the inline disposition' do
     data = File.new("#{Rails.root}/test/fixtures/files/file_picture.png", 'rb').read
     df = Factory :data_file,
-                 content_blobs: [Factory(:content_blob, data: data, content_type: 'images/png')],
+                 content_blob: Factory(:content_blob, data: data, content_type: 'images/png'),
                  policy: Factory(:downloadable_public_policy)
 
-    get :download, data_file_id: df, id: df.content_blobs.first, disposition: 'inline'
+    get :download, data_file_id: df, id: df.content_blob, disposition: 'inline'
     assert_response :success
     assert @response.header['Content-Disposition'].include?('inline')
   end
@@ -419,10 +429,10 @@ class ContentBlobsControllerTest < ActionController::TestCase
   test 'should handle normal attachment download' do
     data = File.new("#{Rails.root}/test/fixtures/files/file_picture.png", 'rb').read
     df = Factory :data_file,
-                 content_blobs: [Factory(:content_blob, data: data, content_type: 'images/png')],
+                 content_blob: Factory(:content_blob, data: data, content_type: 'images/png'),
                  policy: Factory(:downloadable_public_policy)
 
-    get :download, data_file_id: df, id: df.content_blobs.first
+    get :download, data_file_id: df, id: df.content_blob
     assert_response :success
     assert @response.header['Content-Disposition'].include?('attachment')
   end
@@ -455,6 +465,7 @@ class ContentBlobsControllerTest < ActionController::TestCase
   end
 
   private
+
   def mock_http
     file = "#{Rails.root}/test/fixtures/files/file_picture.png"
     stub_request(:get, 'http://mockedlocation.com/a-piccy.png').to_return(body: File.new(file), status: 200, headers: { 'Content-Type' => 'image/png' })

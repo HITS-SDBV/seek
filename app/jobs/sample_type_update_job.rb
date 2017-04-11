@@ -12,7 +12,7 @@ class SampleTypeUpdateJob < SeekJob
 
   def perform_job(item)
     item.refresh_samples if refresh_samples?
-    Seek::Samples::SampleTypeEditingConstraints(item).refresh_cache
+    Seek::Samples::SampleTypeEditingConstraints.new(item).refresh_cache
   end
 
   def gather_items

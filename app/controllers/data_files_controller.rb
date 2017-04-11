@@ -16,7 +16,7 @@ class DataFilesController < ApplicationController
   before_filter :xml_login_only, only: [:upload_for_tool, :upload_from_email]
   before_filter :get_sample_type, only: :extract_samples
   before_filter :check_already_extracted, only: :extract_samples
-  before_filter :forbid_new_version_if_samples, :only => :new_version	
+  before_filter :forbid_new_version_if_samples, :only => :new_version
 
   # has to come after the other filters
   include Seek::Publishing::PublishingCommon
@@ -228,7 +228,7 @@ class DataFilesController < ApplicationController
     @data_file =  DataFile.find(params[:id])
     sheet = params[:sheet] || 1
     trim = params[:trim] || false
-    content_blob = @data_file.content_blobs.first
+    content_blob = @data_file.content_blob
     file = open(content_blob.filepath)
     mime_extensions = mime_extensions(content_blob.content_type)
     if !(%w(xls xlsx) & mime_extensions).empty?
