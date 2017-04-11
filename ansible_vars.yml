@@ -3,11 +3,11 @@ java_product: jdk # jdk vs jre required due to rjb gem
 java_version: 8
 java_shell_profile: true
 
-eclipse_distro: mars 
+eclipse_distro: neon 
 eclipse_package: php
 eclipse_plugins_install:
   - egit
-  - aptana_studio
+#  - aptana_studio
 #  - redmine_mylyn
 
 package_list_eclipse:
@@ -53,7 +53,7 @@ nginx_vhosts:
     root: "{{ seek_project_root }}/public"
     error_log:   /var/log/nginx/seek_error.log
     access_log:  /var/log/nginx/seek_access.log
-    passenger_user: vagrant
+    passenger_user: "{{ www_user }}"
     passenger_enabled: "on"
     passenger_app_env: "{{ rails_env }}"
     # https://www.phusionpassenger.com/library/indepth/ruby/spawn_methods/#smart-spawning-caveats
