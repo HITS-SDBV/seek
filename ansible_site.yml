@@ -3,7 +3,7 @@
 
 - hosts: [rvm]
   roles:
-  - role: rvm_io.rvm1-ruby
+  - role: rvm_io.ruby
     become: yes
     when: rvm1_rubies|length > 0
 
@@ -31,10 +31,6 @@
     command: /bin/bash -lc "rvm `cat .ruby-version` @`cat .ruby-gemset` --create do bundle install"
     args:
       chdir: "{{ seek_project_root }}" 
-  - name: gem install ruby-debug-ide		
-    command: /bin/bash -lc "rvm `cat .ruby-version` @`cat .ruby-gemset` --create do gem install ruby-debug-ide"		
-    args:		
-      chdir: "{{ seek_project_root }}"
 
 - hosts: [mysql]
   roles:
