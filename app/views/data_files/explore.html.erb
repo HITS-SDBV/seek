@@ -5,11 +5,13 @@
 
 <div style="margin-left: auto; margin-right: auto; margin-top: 2em; width: 98%;">
   <div id="spreadsheet_errors"></div>
-  
-  <input size="10" id="selection_data">
+  <button id="applySelection">Apply Selection</button>
+  <input size="50" id="selection_data">
   <input size="60" id="cell_info" readonly="readonly">
 
   <div class="spreadsheet_controls">
+    <%= link_to image('destroy') + " Clear Selection", "#", :onclick =>"deselect_cells();$j('#cell_info').val(''); return false;",
+                :title => "Cancel the current selection", :class => "spreadsheet_button requires_selection" %>
     <%= link_to image('spreadsheet') + " List Annotations", "#", :onclick =>"$j('div.spreadsheet_popup').hide(); $j('div#annotation_overview').show();return false;",
           :title => "Add new annotation", :class => "spreadsheet_button" %>
     <% if logged_in? %>
@@ -20,8 +22,6 @@
           :title => "Export selected cells into an external application", :class => "spreadsheet_button requires_selection" %>
     <%= link_to image('graph') + " Plot Data", "#", :onclick =>"plot_selected_cells('plot_data','620','400'); return false;",
           :title => "XNY plot of the data", :class => "spreadsheet_button requires_selection" %>
-    <%= link_to image('destroy') + " Clear Selection", "#", :onclick =>"deselect_cells();$j('#cell_info').val(''); return false;",
-          :title => "Cancel the current selection", :class => "spreadsheet_button requires_selection" %>
     <%= link_to image('graph') + " T-test", "#",:onclick =>"send_to_python(); return false;" ,
                 :title => "Performs a T-test on the selection", :class => "spreadsheet_button requires_selection" %>
     <!-- , :onclick =>"send_to_python(); return false;" :target => '_blank', -->

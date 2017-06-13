@@ -1,3 +1,4 @@
+//= require spreadsheet_json
 function annotation_source(id, type, name, url) {
     this.id = id;
     this.type = type;
@@ -22,6 +23,15 @@ function annotation(id, type, sheet_number, cell_range, content, date_created) {
 }
 
 var $j = jQuery.noConflict(); //To prevent conflicts with prototype
+
+// http://some-base-url/data_files/2/explore?version=1#"
+var xml_url = (window.location.href).replace(new RegExp("(\\d+)/explore.*$"), "$1/data.xml");
+console.log("Getting XML file at: ", xml_url);
+var full_json_obj;
+if (xml_url.indexOf("data.xml") != -1) {
+    console.log("Success! Converting to json...");
+    full_json_obj = {workbook: [xml2json(get_xml_file(xml_url), "")]};
+}
 
 $j(window)
     .resize(function(e) {
@@ -65,7 +75,7 @@ $j(document).ready(function ($) {
 
     //Cell selection
     $("table.sheet td.cell")
-        .mousedown(function () {
+        .mousedown(function (evt) {
             //enable selection of cells only in spreadsheet explore, not search preview.
             if ($('div#spreadsheet_outer_frame').length > 0) {
                 if (!isMouseDown) {
@@ -83,19 +93,59 @@ $j(document).ready(function ($) {
                     startRow = parseInt($(this).attr("row"));
                     startCol = parseInt($(this).attr("col"));
                 }
+                //select_cells(startCol, startRow, startCol, startRow, null);
+                //from nmtrypi
+                var selected = $(this).hasClass("selected_cell");
 
-                select_cells(startCol, startRow, startCol, startRow, null);
+                if(selected){
+                    $(this).trigger("deselect");
+                }else{
+                    $(this).trigger("select",[evt.ctrlKey]);
+                }
 
+                if( $('#cell_menu').css("display") === "block"){
+                    $('#cell_menu').hide();
+                }
+                
                 return false; // prevent text selection
             }
         })
-        .mouseover(function (e) {
+        .mouseover(function (evt) {
             if (isMouseDown) {
 
                 endRow = parseInt($(this).attr("row"));
                 endCol = parseInt($(this).attr("col"));
 
-                select_cells(startCol, startRow, endCol, endRow, null);
+                var selected = $(this).hasClass("selected_cell");
+
+                if(!selected){
+
+                    $(this).addClass("selected_cell");
+                    select_cells(startCol, startRow, endCol, endRow, null, evt.ctrlKey);
+                    // put in input field
+                }
+                //select_cells(startCol, startRow, endCol, endRow, null);
+            }
+        })
+        .on("select", function(evt, ctrl_key){
+            $(this).addClass("selected_cell");
+            select_cells(startCol, startRow, startCol, startRow, null, ctrl_key);
+            //put in input field
+        })
+        .on("deselect", function(evt){
+            $(this).removeClass("selected_cell");
+            var row = parseInt($(this).attr("row"));
+            var col = parseInt($(this).attr("col"));
+            // console.log("deselect cell at row: " + row + ", col: "+ col);
+            var selected_cells_in_row =  $("table.active_sheet tr td.selected_cell[row="+ row +"]"),
+                selected_cells_in_col =  $("table.active_sheet tr td.selected_cell[col=" + col + "]");
+
+            if(selected_cells_in_row.length===0){
+                $("div.row_heading").slice(row-1, row).removeClass("selected_heading");
+            }
+
+            if(selected_cells_in_col.length===0){
+                $("div.col_heading").slice(col-1, col).removeClass("selected_heading");
             }
         })
     ;
@@ -184,20 +234,63 @@ $j(document).ready(function ($) {
         })
     ;
 
+    //Select cells that are typed in the input field (triggered by 'enter' or special button)
+    // ',' separates different selections,  '!' separates location(sheets) from chosen range, ':' separates edges of range(A1:C20)
+    //possible forms: future addition: [file1:]
+    // 1. sheet1!A1:C10,sheet2!B3:J90, ...
+    // 2. sheet1:sheet4!A1:C10, ....
+    function select_typed_input(selection_text) {
+        //var active_sheet = $("div.active_sheet");
+        //var active_sheet_number = active_sheet[0].id.split('_')[1];
+        var selections_arr = selection_text.replace(/\s+/g,'').split(',');
+        deselect_cells();
+        var multiple = true;
+        var from_input = true;
+        $('#selection_data').val(selection_text);
+
+        //for (single_sel of selections_arr) {
+        for (k=0; k<selections_arr.length; k++ ){
+            //console.log("single_selection: ", selections_arr[k]);
+
+            //loc_element[0] = sheet information, could be multiple sheets, one sheet, or none (default: active_sheet)
+            //loc_element[1] = range of cells, unless previous doesn't exist.
+            var loc_element = selections_arr[k].split('!');
+
+            //if no sheet specified, select given range on active sheet
+            if (loc_element.length == 1) {
+                select_range(loc_element[0], null, multiple, from_input);
+
+                //sheet(s) were specified i.e "sheet1:sheet3"
+            } else {
+                locations = loc_element[0].split(':');
+                var sheetNum1 = locations[0].match(/\d+/)[0];
+                var sheetNum2 = locations.length > 1 ? locations[1].match(/\d+/)[0]: sheetNum1;
+                //iterate on sheets to select the typed range on each
+                for (var i=sheetNum1;i<=sheetNum2;i++) {
+                    select_range(loc_element[1], i, multiple, from_input);
+                }
+            }
+        } //done with a string of a single selection
+    }
+
     //Select cells that are typed in
     $('input#selection_data')
         .keyup(function(e) {
             if(e.keyCode == 13) {
-                var active_sheet = $j("div.active_sheet");
-                var active_sheet_number = active_sheet.id.split('_')[1];
-                select_range($(this).val(), active_sheet_number);
+                select_typed_input($('#selection_data').val());
             }
         })
     ;
 
+    //Select cells that are typed in when clicking on the "apply selection" button
+    $('#applySelection').click(function() {
+        select_typed_input($('#selection_data').val());
+    });
+
     //Resizable column/row headings
     //also makes them clickable to select all cells in that row/column
     $( "div.col_heading" )
+        .attr("col_selected", false)
         .resizable({
             minWidth: 20,
             handles: 'e',
@@ -214,16 +307,37 @@ $j(document).ready(function ($) {
                 }
             }
         })
-        .mousedown(function(){
+        .mousedown(function(evt){
             //enable selection of cells only in spreadsheet explore, not search preview.
             if ($('div#spreadsheet_outer_frame').length > 0) {
                 var col = $(this).index();
-                var last_row = $(this).parent().parent().parent().find("div.row_heading").size();
-                select_cells(col, 1, col, last_row, null);
+                selected= $(this).attr("col_selected")==="true";
+                if (selected) {
+                    $(this).trigger("deselect");
+                } else {
+                    $(this).trigger("select",[evt.ctrlKey]);
+                }
+                $(this).attr("col_selected", !selected);
+
+               // var last_row = $(this).parent().parent().parent().find("div.row_heading").size();
+               // select_cells(col, 1, col, last_row, null);
             }
+        })
+        .on("select", function(evt, ctrl_key){
+            $(this).addClass("selected_heading");
+            var col = $(this).index();
+            var last_row = $(this).parent().parent().parent().find("div.row_heading").length;
+            select_cells(col,1,col,last_row,null, ctrl_key);
+
+        })
+        .on("deselect", function(){
+            $(this).removeClass("selected_heading");
+            var col = $(this).index();
+            $("table.active_sheet tr td.selected_cell[col=" + col + "]").trigger("deselect");//removeClass("selected_cell");
         })
     ;
     $( "div.row_heading" )
+        .attr("row_selected", false)
         .resizable({
             minHeight: 15,
             handles: 's',
@@ -238,16 +352,37 @@ $j(document).ready(function ($) {
                 }
             }
         })
-        .mousedown(function(){
+        .mousedown(function(evt){
             //enable selection of cells only in spreadsheet explore, not search preview.
             if ($('div#spreadsheet_outer_frame').length > 0) {
-                var row = $(this).index() + 1;
-                var last_col = $(this).parent().parent().parent().find("div.col_heading").size();
-                select_cells(1, row, last_col, row, null);
+                var selected= $(this).attr("row_selected") === "true";
+                if(selected){
+                    $(this).trigger("deselect");
+                }else{
+                    $(this).trigger("select", [evt.ctrlKey]);
+                }
+                $(this).attr("row_selected", !selected);
+                //var row = $(this).index() + 1;
+                //var last_col = $(this).parent().parent().parent().find("div.col_heading").size();
+                //select_cells(1, row, last_col, row, null);
             }
+        })
+        .on("select", function(evt, ctrl_key){
+            var row = $(this).index() + 1,
+                last_col = $(this).parent().parent().parent().find("div.col_heading").length;
+            $(this).addClass("selected_heading");
+            select_cells(1,row,last_col,row,null, ctrl_key);
+
+        })
+        .on("deselect", function(){
+            var row = $(this).index() + 1;
+            $(this).removeClass("selected_heading");
+            $("table.active_sheet tr td.cell[row=" + row + "]").trigger("deselect");
         })
     ;
     adjust_container_dimensions();
+//    adjust_container_dimensions();
+
 
 });
 
@@ -498,33 +633,44 @@ function jumpToAnnotation(id, sheet, range) {
         cells.position().top);
 }
 
-function select_range(range, sheetNumber) {
+function select_range(range, sheetNumber, multiple, from_text) {
     var coords = explodeCellRange(range);
     var startCol = coords[0],
         startRow = coords[1],
         endCol = coords[2],
         endRow = coords[3];
 
+    var active_sheetNumber = $j("div.active_sheet")[0].id.split('_')[1];
+    if (!sheetNumber)
+        sheetNumber = active_sheetNumber;
+
     if(startRow && startCol && endRow && endCol)
-        select_cells(startCol, startRow, endCol, endRow, sheetNumber);
+        ordered_minMax_RC = select_cells(startCol, startRow, endCol, endRow, sheetNumber, multiple, from_text);
 
-    var relative_rows = relativeRows(startRow, endRow, sheetNumber);
-    var relativeMinRow = relative_rows[0];
-    var relativeMaxRow = relative_rows[1];
+    //scroll to selection only if the selection was made on the active sheet
+    if (active_sheetNumber == sheetNumber) {
+        //Important to keep track of real min/max for the scrolling effect.
+        startRow = ordered_minMax_RC[0];
+        endRow   = ordered_minMax_RC[1];
+        startCol = ordered_minMax_RC[2];
+        endCol   = ordered_minMax_RC[3];
 
-    //Scroll to selected cells
-    var row = $j("table.active_sheet tr").slice((relativeMinRow-1),relativeMaxRow).first();
-    var cell = row.children("td.cell").slice(startCol-1,endCol).first();
+        var relative_rows = relativeRows(startRow, endRow, sheetNumber);
+        var relativeMinRow = relative_rows[0];
+        var relativeMaxRow = relative_rows[1];
 
-    $j('div.active_sheet').scrollTop(row.position().top + $j('div.active_sheet').scrollTop() - 500);
-    $j('div.active_sheet').scrollLeft(cell.position().left + $j('div.active_sheet').scrollLeft() - 500);
+        //Scroll to selected
+        var row = $j("table.active_sheet tr").slice((relativeMinRow - 1), relativeMaxRow).first();
+        var cell = row.children("td.cell").slice(startCol - 1, endCol).first();
+
+        $j('div.active_sheet').scrollTop(row.position().top + $j('div.active_sheet').scrollTop() - 500);
+        $j('div.active_sheet').scrollLeft(cell.position().left + $j('div.active_sheet').scrollLeft() - 500);
+    }
 }
 
 function read_data() {
     //var col_header_cells = $j("table.active_sheet tr").first().children("td");
     var selected_cells = $j("table.active_sheet tr").children("td.selected_cell");
-    // console.log(selected_cells);
-    // console.log(col_header_cells);
 
     var data_obj = new Object();
     $j.each(selected_cells, function(k) {
@@ -585,12 +731,20 @@ function deselect_cells() {
 
 
 //Select cells in a specified area
-function select_cells(startCol, startRow, endCol, endRow, sheetNumber) {
+function select_cells(startCol, startRow, endCol, endRow, sheetNumber, ctrl_key, from_text) {
+    if (!sheetNumber)
+        sheetNumber = $j("div.active_sheet")[0].id.split('_')[1];
+
     var minRow = startRow;
     var minCol = startCol;
     var maxRow = endRow;
     var maxCol = endCol;
 
+    var multiple_select = false;
+
+    if(ctrl_key){
+        multiple_select = true;
+    }
     //To ensure minRow/minCol is always less than maxRow/maxCol
     // no matter which direction the box is dragged
     if(endRow <= startRow) {
@@ -606,35 +760,43 @@ function select_cells(startCol, startRow, endCol, endRow, sheetNumber) {
     var relativeMinRow = relative_rows[0];
     var relativeMaxRow = relative_rows[1];
 
-    //Deselect any cells and headings
-    $j(".selected_cell").removeClass("selected_cell");
-    $j(".selected_heading").removeClass("selected_heading");
+    if(!multiple_select){
+        //Deselect any cells and headings
+        $j(".selected_cell").removeClass("selected_cell");
+        $j(".selected_heading").removeClass("selected_heading");
+    }
 
-    //"Select" dragged cells
-    $j("table.active_sheet tr").slice(relativeMinRow-1,relativeMaxRow).each(function() {
-        $j(this).children("td.cell:not(.selected_cell)").slice(minCol-1,maxCol).addClass("selected_cell");
+    //"Select" dragged/typed cells - instead of using "table.active_sheet tr", use:  $j('div.sheet#spreadsheet_1 table tr')
+//    $j("table.active_sheet tr").slice(relativeMinRow-1,relativeMaxRow).each(function() {
+    $j("div.sheet#spreadsheet_"+sheetNumber+" table tr").slice(relativeMinRow-1,relativeMaxRow).each(function() {
+        $j(this).children("td.cell").slice(minCol-1,maxCol).addClass("selected_cell");
     });
 
-    //"Select" dragged cells' column headings
-    $j("div.active_sheet").parent().parent().find("div.col_headings div.col_heading").slice(minCol-1,maxCol).addClass("selected_heading");
+    //"Select" dragged/typed cells' column headings [old: $j("div.active_sheet")]
+    $j("div.sheet#spreadsheet_"+sheetNumber).parent().parent().find("div.col_headings div.col_heading").slice(minCol-1,maxCol).addClass("selected_heading");
 
-    //"Select" dragged cells' row headings
-    $j("div.active_sheet").parent().find("div.row_headings div.row_heading").slice(relativeMinRow-1,relativeMaxRow).addClass("selected_heading");
+    //"Select" dragged/typed cells' row headings
+    $j("div.sheet#spreadsheet_"+sheetNumber).parent().find("div.row_headings div.row_heading").slice(relativeMinRow-1,relativeMaxRow).addClass("selected_heading");
 
     //Update the selection display e.g A3:B2
-    var selection = "";
-    selection += (num2alpha(minCol).toString() + minRow.toString());
+    //The following does not work (??) when combined with (multiple) input text selections or multiple click and drag selection or selection across sheets.
+    if (from_text === undefined) {
+        var selection = "";
+        selection += (num2alpha(minCol).toString() + minRow.toString());
 
-    if(maxRow != minRow || maxCol != minCol)
-        selection += (":" + num2alpha(maxCol).toString() + maxRow.toString());
+        if (maxRow != minRow || maxCol != minCol)
+            selection += (":" + num2alpha(maxCol).toString() + maxRow.toString());
 
-    $j('#selection_data').val(selection);
+        $j('#selection_data').val(selection);
+    }
 
     //Update cell coverage in annotation form
     $j('input.annotation_cell_coverage_class').attr("value",selection);
 
     //Show selection-dependent controls
     $j('.requires_selection').show();
+
+    return [minRow, maxRow, minCol, maxCol];
 }
 
 /* search_matched_spreadsheets_content.html.erb calls with a third argument - fileIndex = item_id

@@ -369,9 +369,10 @@ class DataFilesController < ApplicationController
     yparams=y
 
     # location of the convert command to be run
-    command = '/usr/local/bin/jupyter-nbconvert'
+    #command = '/usr/local/bin/jupyter-nbconvert'
+    command = '/opt/local/bin/jupyter-nbconvert-2.7'
     # server tmp location
-    tmp_dir = '/home/leonovhs/SEEK/Effnet/seek/public/python_nb/'
+    tmp_dir = './public/python_nb/'
     # location of the notebook into which parameters will be inserted
     ## notebook = tmp_dir + 'Modified.ipynb'
     notebook = tmp_dir + 'T_test.ipynb'
