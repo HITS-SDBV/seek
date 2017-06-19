@@ -100,7 +100,11 @@ SEEK::Application.configure do
   Seek::Config.default :copyright_addendum_enabled,false
   Seek::Config.default :copyright_addendum_content,'Additions copyright ...'
 
-  #Imprint
+  #ipython
+  Seek::Config.default :nbconvert_path, '/usr/local/bin/jupyter-nbconvert'
+  Seek::Config.default :python_nb_tmp, './public/python_nb'
+
+#Imprint
   Settings.defaults[:imprint_enabled]= false
   imprint_example = ''
   File.open(Rails.root.join('config/default_data/imprint_example')) do |infile|

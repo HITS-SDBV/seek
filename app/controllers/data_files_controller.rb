@@ -34,8 +34,10 @@ class DataFilesController < ApplicationController
     k1 = params.keys[0]
     k2 = params.keys[1]
     #first_ipython_attempt(params[:x],params[:y])
-    first_ipython_attempt(params[k1],params[k2])
-    redirect_to "python_nb/outbook.nbconvert.html"
+    html_output = first_ipython_attempt(params[k1],params[k2])
+    puts "^^^^ redirection: ", html_output
+    redirect_to html_output
+    #"python_nb/outbook.nbconvert.html"
   end
 
   def plot
@@ -360,7 +362,6 @@ class DataFilesController < ApplicationController
 
   protected
 
-  # Wolfgang's first attempt at combining ruby and ipython notebooks
   def first_ipython_attempt(x,y)
     #  require 'json'
     # this is the parameters that will be inserted into the notebook
@@ -369,25 +370,30 @@ class DataFilesController < ApplicationController
     yparams=y
 
     # location of the convert command to be run
-    #command = '/usr/local/bin/jupyter-nbconvert'
-    command = '/opt/local/bin/jupyter-nbconvert-2.7'
+    command = Settings.defaults[:nbconvert_path]
+    puts "nbconvert_path: ", command
+    puts "tmp: ", Settings.defaults[:python_nb_tmp]
+
     # server tmp location
-    tmp_dir = './public/python_nb/'
+    tmp_dir =  Settings.defaults[:python_nb_tmp]
+
     # location of the notebook into which parameters will be inserted
-    ## notebook = tmp_dir + 'Modified.ipynb'
-    notebook = tmp_dir + 'T_test.ipynb'
+    notebook = tmp_dir + '/T_test.ipynb'
+    timestamp = Time.now.to_i.to_s
+
     # location of the notebook with the inserted parameters
-    # FIXME use tempfile for outbook location
-    outbook = tmp_dir + 'outbook.ipynb'
+    # FIX ME use tempfile for outbook location
+    #??? outbook = tmp_dir + '/outbook_' + timestamp + '.ipynb'
+    outbook = tmp_dir + '/outbook.ipynb'
 
     # the outbook needs to be run in order to update the results
-    # outbook_processed holds the notebook with the updated results
-    # FIXME use tempfile for outbook_processed location
-    outbook_processed = tmp_dir + 'outbook.nbconvert.ipynb'
+    # FIX ME use tempfile for outbook_processed location
+    # ??? outbook_processed = tmp_dir + '/outbook_' + timestamp + '.nbconvert.ipynb'
+    outbook_processed = tmp_dir + '/outbook.nbconvert.ipynb'
 
     #
     #  Actual work starts here
-    # FIXME make this a methods
+    # FIX ME make this a methods
 
     # Read the notebook from file into a string
     notebook_source = File.read(notebook);
@@ -401,7 +407,7 @@ class DataFilesController < ApplicationController
     # works now, needs to be generalized
     json_notebook["cells"][1]["source"]="data1=#{xparams}\ndata2=#{yparams}\n";
 
-    # FIXME needs error checking. What happens if file cannot be opened?
+    # FIX ME needs error checking. What happens if file cannot be opened?
     outfile = File.new(outbook,"w")
 
     # this writes the modified book
@@ -409,20 +415,21 @@ class DataFilesController < ApplicationController
     outfile.close()
 
     # run scripts:
-    # First execute the notebook
-    # Then transform into HTML
-    #
     # seems to be the safest way to run ruby commands according to
     # first run the notebook!
-    puts *%W( #{command} #{outbook} --to notebook --execute  )
+    puts "*** running the notebook: ", *%W( #{command} #{outbook} --to notebook --execute  )
     system *%W( #{command} #{outbook} --to notebook --execute  )
     # then turn it into HTML
     # One alternative way to do it would be to run the script.
     # however, I do not know how you would get the plot.
-    puts  *%W( #{command} #{outbook_processed} --to html)
+    puts "*** converting notebook to HTML: ", *%W( #{command} #{outbook_processed} --to html)
     system *%W( #{command} #{outbook_processed} --to html)
 
     # Maybe some fishing inside the notebook in order to isolate the result of the last cell
+
+    #redirect here eventually
+    outbook_processed.sub('.ipynb', '.html').sub('./public','')
+
   end
 
   def translate_action(action)

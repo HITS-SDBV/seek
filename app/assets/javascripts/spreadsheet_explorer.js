@@ -702,10 +702,10 @@ function send_to_python(){
         })
         .always(function() {
             console.log("always - not the best solution")
-            var new_page = window.open("/python_nb/outbook.nbconvert.html");
+            var date = new Date();
+            var new_page = window.open("/python_nb/outbook.nbconvert.html?"+ date.getTime());
             $j('#ipython_figure > img').remove();
             $j("#ipython_figure_container").show();
-            var date = new Date();
             $j('#ipython_figure').prepend($j('<img>',{id: 'scatterPlot', src:"/python_nb/table.png?"+ date.getTime()}));
         })
     ;
