@@ -35,9 +35,9 @@ class DataFilesController < ApplicationController
     k2 = params.keys[1]
     #first_ipython_attempt(params[:x],params[:y])
     html_output = first_ipython_attempt(params[k1],params[k2])
-    puts "^^^^ redirection: ", html_output
-    redirect_to html_output
-    #"python_nb/outbook.nbconvert.html"
+    #redirect_to html_output
+    #TO DO redirect to a variable html filename based on a timestamp or tmp-stamp generation.
+    redirect_to "/python_nb/outbook.nbconvert.html"
   end
 
   def plot
@@ -371,12 +371,11 @@ class DataFilesController < ApplicationController
 
     # location of the convert command to be run
     command = Settings.defaults[:nbconvert_path]
-    puts "nbconvert_path: ", command
-    puts "tmp: ", Settings.defaults[:python_nb_tmp]
 
     # server tmp location
     tmp_dir =  Settings.defaults[:python_nb_tmp]
 
+    Rails.logger.info "nbconvert_path: " + command + "\ntmp: " + tmp_dir
     # location of the notebook into which parameters will be inserted
     notebook = tmp_dir + '/T_test.ipynb'
     timestamp = Time.now.to_i.to_s
@@ -418,11 +417,13 @@ class DataFilesController < ApplicationController
     # seems to be the safest way to run ruby commands according to
     # first run the notebook!
     puts "*** running the notebook: ", *%W( #{command} #{outbook} --to notebook --execute  )
+    Rails.logger.info "Running:  + #{command} #{outbook} --to notebook --execute"
     system *%W( #{command} #{outbook} --to notebook --execute  )
     # then turn it into HTML
     # One alternative way to do it would be to run the script.
     # however, I do not know how you would get the plot.
     puts "*** converting notebook to HTML: ", *%W( #{command} #{outbook_processed} --to html)
+
     system *%W( #{command} #{outbook_processed} --to html)
 
     # Maybe some fishing inside the notebook in order to isolate the result of the last cell
