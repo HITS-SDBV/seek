@@ -703,10 +703,12 @@ function send_to_python(){
         .always(function() {
             console.log("always - not the best solution")
             var date = new Date();
-            var new_page = window.open("/python_nb/outbook.nbconvert.html?"+ date.getTime());
-            $j('#ipython_figure > img').remove();
+            var ipynb_html = "/python_nb/outbook.nbconvert.html?";
+            var ipynb_path = ipynb_html.replace("html?", "ipynb");
+            var new_page = window.open(ipynb_html+ date.getTime());
+            $j('#py_png_dl > img').remove();
             $j("#ipython_figure_container").show();
-            $j('#ipython_figure').prepend($j('<img>',{id: 'scatterPlot', src:"/python_nb/table.png?"+ date.getTime()}));
+            load_image_and_hrefs(date.getTime(), ipynb_path);
         })
     ;
 //    $j.when(python_ajax).done(function(a1) { maybe this doesn't work because the call "fails"
@@ -714,7 +716,7 @@ function send_to_python(){
 //       console.log(a1)
 //       $j('#ipython_figure > img').remove();
 //       $j("#ipython_figure_container").show();
-//       $j('#ipython_figure').prepend($j('<img>',{id: 'scatterPlot', src:"/python_nb/scatter.png"}));
+//       $j('#ipython_figure').prepend($j('<img>',{id: '`scatterPlot', src:"/python_nb/scatter.png"}));
 //    })
 }
 

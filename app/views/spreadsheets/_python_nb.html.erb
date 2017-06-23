@@ -5,16 +5,39 @@
     <br style="clear:both"/>
   </div>
   <div>
-    <button id="export_ipython_png" class="export"> Export PNG </button>
-    <button id="export_ipython_nb" class="export"> Export iPython Notebook </button>
 
+    <button id="export_ipython_png" class="export">Export PNG </button>
+    <button id="export_ipython_nb" class="export">  Export iPython Notebook
+      <a id="ipynb_dl" href="" download hidden type='application/octet-stream'>
+      </a>
+    </button>
   </div>
-  <div id="ipython_figure" style=""> </div>
+  <div id="ipython_figure" style="">
+    <a id="py_png_dl" href="" download></a>
+  </div>
 </div>
 
 <script type="text/javascript">
+  $j( document ).ready(function() {
+    $j('#export_ipython_png').click(function() {
+      $j("#py_png_dl")[0].click();
+    });
+    $j('#export_ipython_nb').click(function() {
+      $j("#ipynb_dl")[0].click();
+    });
+  });
   function cleanup_ipython_plot() {
     $j('#ipython_figure_container').hide();
-    $j('#ipython_figure > img').remove();
+    $j('#py_png_dl > img').remove();
   }
+  function load_image_and_hrefs(time, ipynb_path) {
+    //add an image
+    $j('#py_png_dl').prepend($j('<img>',{id: 'Ttest_table', class: "downloadable", src:"/python_nb/table.png?"+ time}));
+    //make image downloadable by binding it to an <a href> element, setting href = the image source.
+    $j('#py_png_dl')
+        .attr('href', $j('#Ttest_table').attr('src'))
+    $j('#ipynb_dl')
+        .attr("href", ipynb_path)
+  }
+
 </script>
