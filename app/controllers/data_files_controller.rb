@@ -1,4 +1,3 @@
-
 require 'simple-spreadsheet-extractor'
 
 class DataFilesController < ApplicationController
@@ -16,7 +15,7 @@ class DataFilesController < ApplicationController
   before_filter :xml_login_only, only: [:upload_for_tool, :upload_from_email]
   before_filter :get_sample_type, only: :extract_samples
   before_filter :check_already_extracted, only: :extract_samples
-  before_filter :forbid_new_version_if_samples, :only => :new_version	
+  before_filter :forbid_new_version_if_samples, :only => :new_version
 
   # has to come after the other filters
   include Seek::Publishing::PublishingCommon
@@ -184,7 +183,7 @@ class DataFilesController < ApplicationController
             update_assay_assets(@data_file, assay_ids, relationship_types)
             format.html { redirect_to data_file_path(@data_file) }
           end
-      end
+        end
       else
         respond_to do |format|
           format.html do
@@ -424,79 +423,79 @@ class DataFilesController < ApplicationController
     # seems to be the safest way to run ruby commands according to
     # first run the notebook!
     puts "*** running the notebook: ", *%W( #{command} #{outbook} --to notebook --execute  )
-    Rails.logger.info "Running:  + #{command} #{outbook} --to notebook --execute"
-    system *%W( #{command} #{outbook} --to notebook --execute  )
-    # then turn it into HTML
-    # One alternative way to do it would be to run the script.
-    # however, I do not know how you would get the plot.
-    puts "*** converting notebook to HTML: ", *%W( #{command} #{outbook_processed} --to html)
+           Rails.logger.info "Running:  + #{command} #{outbook} --to notebook --execute"
+           system *%W( #{command} #{outbook} --to notebook --execute  )
+             # then turn it into HTML
+             # One alternative way to do it would be to run the script.
+             # however, I do not know how you would get the plot.
+             puts "*** converting notebook to HTML: ", *%W( #{command} #{outbook_processed} --to html)
 
-    system *%W( #{command} #{outbook_processed} --to html)
+                    system *%W( #{command} #{outbook_processed} --to html)
 
-    # Maybe some fishing inside the notebook in order to isolate the result of the last cell
+                      # Maybe some fishing inside the notebook in order to isolate the result of the last cell
 
-    #redirect here eventually
-    outbook_processed.sub('.ipynb', '.html').sub('./public','')
+                      #redirect here eventually
+                      outbook_processed.sub('.ipynb', '.html').sub('./public','')
 
-  end
+                      end
 
-  def translate_action(action)
-    action = 'download' if action == 'data'
-    action = 'view' if ['matching_models'].include?(action)
-    super action
-  end
+                      def translate_action(action)
+                        action = 'download' if action == 'data'
+                        action = 'view' if ['matching_models'].include?(action)
+                        super action
+                      end
 
-  def xml_login_only
-    unless session[:xml_login]
-      flash[:error] = 'Only available when logged in via xml'
-      redirect_to root_url
-    end
-  end
+                      def xml_login_only
+                        unless session[:xml_login]
+                          flash[:error] = 'Only available when logged in via xml'
+                          redirect_to root_url
+                        end
+                      end
 
-  def get_sample_type
-    if params[:sample_type_id] || @data_file.possible_sample_types.count == 1
-      if params[:sample_type_id]
-        @sample_type = SampleType.includes(:sample_attributes).find(params[:sample_type_id])
-      else
-        @sample_type = @data_file.possible_sample_types.last
-      end
-    elsif @data_file.possible_sample_types.count > 1
-      # Redirect to sample type selector
-      respond_to do |format|
-        format.html { redirect_to select_sample_type_data_file_path(@data_file) }
-      end
-    else
-      flash[:error] = "Couldn't determine the sample type of this data"
-      respond_to do |format|
-        format.html { redirect_to @data_file }
-      end
-    end
-  end
+                      def get_sample_type
+                        if params[:sample_type_id] || @data_file.possible_sample_types.count == 1
+                          if params[:sample_type_id]
+                            @sample_type = SampleType.includes(:sample_attributes).find(params[:sample_type_id])
+                          else
+                            @sample_type = @data_file.possible_sample_types.last
+                          end
+                        elsif @data_file.possible_sample_types.count > 1
+                          # Redirect to sample type selector
+                          respond_to do |format|
+                            format.html { redirect_to select_sample_type_data_file_path(@data_file) }
+                          end
+                        else
+                          flash[:error] = "Couldn't determine the sample type of this data"
+                          respond_to do |format|
+                            format.html { redirect_to @data_file }
+                          end
+                        end
+                      end
 
-  def check_already_extracted
-    if @data_file.extracted_samples.any?
-      flash[:error] = 'Already extracted samples from this data file'
-      respond_to do |format|
-        format.html { redirect_to @data_file }
-      end
-    end
-  end
+                      def check_already_extracted
+                        if @data_file.extracted_samples.any?
+                          flash[:error] = 'Already extracted samples from this data file'
+                          respond_to do |format|
+                            format.html { redirect_to @data_file }
+                          end
+                        end
+                      end
 
-  def forbid_new_version_if_samples
-    if @data_file.extracted_samples.any?
-      flash[:error] = "Cannot upload a new version if samples have been extracted"
-      respond_to do |format|
-        format.html { redirect_to @data_file }
-      end
-    end
-  end
+                      def forbid_new_version_if_samples
+                        if @data_file.extracted_samples.any?
+                          flash[:error] = "Cannot upload a new version if samples have been extracted"
+                          respond_to do |format|
+                            format.html { redirect_to @data_file }
+                          end
+                        end
+                      end
 
-  private
+                      private
 
-  def data_file_params
-    params.require(:data_file).permit(:title, :description, { project_ids: [] }, :license, :other_creators,
-                                      :parent_name, { event_ids: [] },
-                                      { special_auth_codes_attributes: [:code, :expiration_date, :id, :_destroy] })
-  end
+                      def data_file_params
+                        params.require(:data_file).permit(:title, :description, { project_ids: [] }, :license, :other_creators,
+                                                          :parent_name, { event_ids: [] },
+                                                          { special_auth_codes_attributes: [:code, :expiration_date, :id, :_destroy] })
+                      end
 
-end
+                      end
