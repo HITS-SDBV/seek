@@ -673,51 +673,67 @@ function read_data() {
     var selected_cells = $j("table.active_sheet tr").children("td.selected_cell");
 
     var data_obj = new Object();
+
+    // generate the keys from the column headings ('A', 'B', ...)  and fill with content of cells
     $j.each(selected_cells, function(k) {
-        //console.log(selected_cells[k].id,  selected_cells[k].innerHTML);
-        var ccol = selected_cells[k].id.split("_")[1].replace(/[0-9]/g,'');
-        if (data_obj[ccol] == undefined) {data_obj[ccol] = new Array();}
-        data_obj[ccol].push(selected_cells[k].innerHTML);
+	//console.log(selected_cells[k].id,  selected_cells[k].innerHTML);
+	var ccol = selected_cells[k].id.split("_")[1].replace(/[0-9]/g,'');
+	if (data_obj[ccol] == undefined) {data_obj[ccol] = new Array();}
+	data_obj[ccol].push(selected_cells[k].innerHTML);
     });
     //get rid of first value which is assumed to be column name
-    var col_headers = new Array();
+    // TODO return the namesfor plotting etc.
+    //var col_headers = new Array();
     $j.each(data_obj, function(k) {
-        col_headers.push(data_obj[k][0]);
-        data_obj[k] = data_obj[k].slice(1);
+	//col_headers.push(data_obj[k][0]);
+	data_obj[k] = data_obj[k].slice(1);
     });
     return data_obj;
     //return JSON.stringify(data_obj);
 }
-function send_to_python(){
+
+
+// parameter test is a string specifying which test to perform. one of 'ttest', '1wanova'
+function send_to_python(test){
     data = read_data();
     //$j.post("pythonize", { x: "2,4,6", y:"4,16,36" })
+    console.log("::::::::::::::: in send_to_python");
     console.log(data);
     // console.log({ x: "2,4,6", y:"4,16,36" });
-    $j.post("pythonize", data)
-        .done(function(){
-            console.log("done - yay!")
-        })
-        .fail(function(){
-            console.log("TO DO: why does it fail?")
-        })
-        .always(function() {
-            console.log("always - not the best solution")
-            var date = new Date();
-            var ipynb_html = "/python_nb/outbook.nbconvert.html?";
-            var ipynb_path = ipynb_html.replace("html?", "ipynb");
-            var new_page = window.open(ipynb_html+ date.getTime());
-            $j('#py_png_dl > img').remove();
-            $j("#ipython_figure_container").show();
-            load_image_and_hrefs(date.getTime(), ipynb_path);
-        })
+
+    if (Object.keys(data).length == 0 ) {
+	// TODO: notification to user
+	console.error("Data object was empty. Probably no columns were marked.");
+	return;
+    }
+
+    data['test'] = test
+
+    $j.post("pythonize",  data)
+	.done(function(){
+	    console.log("done - yay!")
+	})
+	.fail(function(){
+	    console.log("TO DO: why does it fail?")
+	})
+	.always(function() {
+	    console.log("always - not the best solution")
+	    var date = new Date();
+	    var ipynb_html = "/python_nb/outbook.nbconvert.html?";
+	    var ipynb_path = ipynb_html.replace("html?", "ipynb");
+	    var new_page = window.open(ipynb_html+ date.getTime());
+	    $j('#py_png_dl > img').remove();
+	    $j("#ipython_figure_container").show();
+	    load_image_and_hrefs(date.getTime(), ipynb_path);
+	})
     ;
-//    $j.when(python_ajax).done(function(a1) { maybe this doesn't work because the call "fails"
-//      // alert("...and we're done")
-//       console.log(a1)
-//       $j('#ipython_figure > img').remove();
-//       $j("#ipython_figure_container").show();
-//       $j('#ipython_figure').prepend($j('<img>',{id: '`scatterPlot', src:"/python_nb/scatter.png"}));
-//    })
+    //    $j.when(python_ajax).done(function(a1) { maybe this doesn't work because the call "fails"
+    //      // alert("...and we're done")
+    //       console.log(a1)
+    //       $j('#ipython_figure > img').remove();
+    //       $j("#ipython_figure_container").show();
+    //       $j('#ipython_figure').prepend($j('<img>',{id: '`scatterPlot', src:"/python_nb/scatter.png"}));
+    //    })
 }
 
 function deselect_cells() {

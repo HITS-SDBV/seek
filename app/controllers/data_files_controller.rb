@@ -28,15 +28,19 @@ class DataFilesController < ApplicationController
   include Seek::IsaGraphExtensions
 
   def pythonize
-    puts params.keys
+    puts "#1#1#1#1#1#1#1#1#1#1#1#"
+    puts params
     #params[:x] = "1,2,3"
     #params[:y] = "4,5,6"
     k1 = params.keys[0]
     k2 = params.keys[1]
+    test = params['test']
     #first_ipython_attempt(params[:x],params[:y])
-    html_output = first_ipython_attempt(params[k1],params[k2])
+    html_output = call_ipython(test, params[k1], params[k2])
+    # TODO check for success
+
     #redirect_to html_output
-    #TO DO redirect to a variable html filename based on a timestamp or tmp-stamp generation.
+    # TODO redirect to a variable html filename based on a timestamp or tmp-stamp generation.
     redirect_to "/python_nb/outbook.nbconvert.html"
   end
 
@@ -362,12 +366,9 @@ class DataFilesController < ApplicationController
 
   protected
 
-  def first_ipython_attempt(x,y)
-    #  require 'json'
-    # this is the parameters that will be inserted into the notebook
-    # needs improving. probably json and then convert to string
-    xparams=x
-    yparams=y
+  def call_ipython(test, xparams, yparams)
+    Rails.logger.debug "xparams: " + xparams.to_s
+    Rails.logger.debug "yparams: " + yparams.to_s
 
     # location of the convert command to be run
     command = Settings.defaults[:nbconvert_path]
@@ -377,7 +378,13 @@ class DataFilesController < ApplicationController
 
     Rails.logger.info "nbconvert_path: " + command + "\ntmp: " + tmp_dir
     # location of the notebook into which parameters will be inserted
-    notebook = tmp_dir + '/T_test.ipynb'
+    if test == "ttest"
+      notebook = tmp_dir + '/T_test.ipynb'
+    else
+      Rails.logger.error "ERROR: " + test + " not implemented."
+      return
+    end
+
     timestamp = Time.now.to_i.to_s
 
     # location of the notebook with the inserted parameters
