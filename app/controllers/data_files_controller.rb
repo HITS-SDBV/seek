@@ -379,7 +379,7 @@ class DataFilesController < ApplicationController
     # location of the notebook into which parameters will be inserted
     if test == "ttest"
       notebook = tmp_dir + '/T_test.ipynb'
-    elseif test == "1wanova"
+    elsif test == "1wanova"
       notebook = tmp_dir + '/anova.ipynb'
     else
       Rails.logger.error "ERROR: " + test + " not implemented."
@@ -426,20 +426,23 @@ class DataFilesController < ApplicationController
     # run scripts:
     # seems to be the safest way to run ruby commands according to
     # first run the notebook!
-    puts "*** running the notebook: ", *%W( #{command} #{outbook} --to notebook --execute  )
-    Rails.logger.info "Running:  + #{command} #{outbook} --to notebook --execute"
-ystem *%W( #{command} #{outbook} --to notebook --execute  )
- # then turn it into HTML
- # One alternative way to do it would be to run the script.
- # however, I do not know how you would get the plot.
-puts "*** converting notebook to HTML: ", *%W( #{command} #{outbook_processed} --to html)
+    puts "*** running the notebook: #{command} #{outbook} --to notebook --execute"
+    Rails.logger.info "Running:  #{command} #{outbook} --to notebook --execute"
+    result = `#{command} #{outbook} --to notebook --execute`
+    puts result
+    # then turn it into HTML
+    # One alternative way to do it would be to run the script.
+    # however, I do not know how you would get the plot.
+    puts "*** converting notebook to HTML:  #{command} #{outbook_processed} --to html"
 
-system *%W( #{command} #{outbook_processed} --to html)
+    result = `#{command} #{outbook_processed} --to html`
 
-# Maybe some fishing inside the notebook in order to isolate the result of the last cell
+    puts result
 
-#redirect here eventually
-outbook_processed.sub('.ipynb', '.html').sub('./public','')
+    # Maybe some fishing inside the notebook in order to isolate the result of the last cell
+
+    #redirect here eventually
+    outbook_processed.sub('.ipynb', '.html').sub('./public','')
 
 end
 
