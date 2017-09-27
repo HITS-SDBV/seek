@@ -694,46 +694,33 @@ function read_data() {
 
 
 // parameter test is a string specifying which test to perform. one of 'ttest', '1wanova'
-function send_to_python(test){
+function send_to_python(){
     data = read_data();
-    //$j.post("pythonize", { x: "2,4,6", y:"4,16,36" })
-    console.log("::::::::::::::: in send_to_python");
-    console.log(data);
-    // console.log({ x: "2,4,6", y:"4,16,36" });
+    test=$j("#stats_dropdown option:selected").text();
 
     if (Object.keys(data).length == 0 ) {
-	// TODO: notification to user
 	console.error("Data object was empty. Probably no columns were marked.");
+	alert("Data object was empty. Probably no columns were marked.");
 	return;
     }
 
-    data['test'] = test
+    data['test'] = test;
 
     $j.post("pythonize",  data)
 	.done(function(){
-	    console.log("done - yay!")
-	})
-	.fail(function(){
-	    console.log("TO DO: why does it fail?")
-	})
-	.always(function() {
-	    console.log("always - not the best solution")
+	    console.log("successfully posted to \"pythonize\".");
 	    var date = new Date();
 	    var ipynb_html = "/python_nb/outbook.nbconvert.html?";
 	    var ipynb_path = ipynb_html.replace("html?", "ipynb");
 	    var new_page = window.open(ipynb_html+ date.getTime());
-	    $j('#py_png_dl > img').remove();
-	    $j("#ipython_figure_container").show();
-	    load_image_and_hrefs(date.getTime(), ipynb_path);
+	    //$j('#py_png_dl > img').remove();
+	    //$j("#ipython_figure_container").show();
+	    //load_image_and_hrefs(date.getTime(), ipynb_path);
 	})
-    ;
-    //    $j.when(python_ajax).done(function(a1) { maybe this doesn't work because the call "fails"
-    //      // alert("...and we're done")
-    //       console.log(a1)
-    //       $j('#ipython_figure > img').remove();
-    //       $j("#ipython_figure_container").show();
-    //       $j('#ipython_figure').prepend($j('<img>',{id: '`scatterPlot', src:"/python_nb/scatter.png"}));
-    //    })
+	.fail(function(){
+	    console.error("TO DO: why does it fail?");
+	    alert("TO DO: why does it fail?");
+	})
 }
 
 

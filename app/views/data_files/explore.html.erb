@@ -22,10 +22,24 @@
     :title => "Export selected cells into an external application", :class => "spreadsheet_button requires_selection" %>
     <%= link_to image('graph') + " Plot Data", "#", :onclick =>"plot_selected_cells('plot_data','620','400'); return false;",
     :title => "XNY plot of the data", :class => "spreadsheet_button requires_selection" %>
+    <!--
     <%= link_to image('graph') + " t-Test", "#",:onclick =>"send_to_python('ttest'); return false;" ,
     :title => "Performs a t-Test on the selection", :class => "spreadsheet_button requires_selection" %>
     <%= link_to image('graph') + " 1W-ANOVA", "#",:onclick =>"send_to_python('1wanova'); return false;" ,
     :title => "Performs a one-way analysis of variance test on the selection", :class => "spreadsheet_button requires_selection" %>
+    <%= link_to image('graph') + " Kruskal-Wallis", "#",:onclick =>"send_to_python('kruskal'); return false;" ,
+    :title => "Performs a Kruskal-Wallis H-test on the selection", :class => "spreadsheet_button requires_selection" %>
+    -->
+    <%= select_tag(
+	'application_stage',
+	options_for_select(
+	[['ttest'],['1wanova'],['kruskal']]
+	),
+	prompt: "Please select",
+	class: '',
+	id: 'stats_dropdown',
+	:onchange => "send_to_python()"
+	) %>
     <!-- , :onclick =>"send_to_python(); return false;" :target => '_blank', -->
   </div>
 

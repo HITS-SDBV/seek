@@ -27,15 +27,21 @@ class DataFilesController < ApplicationController
   include Seek::IsaGraphExtensions
 
   def pythonize
-    puts "#1#1#1#1#1#1#1#1#1#1#1#"
-    puts params
-    #params[:x] = "1,2,3"
-    #params[:y] = "4,5,6"
-    k1 = params.keys[0]
-    k2 = params.keys[1]
+    k0 = params.keys[0]
+    k1 = params.keys[1]
+    k2 = params.keys[2]
     test = params['test']
-    #first_ipython_attempt(params[:x],params[:y])
-    html_output = call_ipython(test, params[k1], params[k2])
+
+    if File.exist?("public/python_nb/outbook.nbconvert.html")
+      puts "deleted outbook.nbconvert.html"
+      File.delete("public/python_nb/outbook.nbconvert.html")
+    end
+    if File.exist?("public/python_nb/outbook.nbconvert.ipynb")
+      puts "deleted outbook.nbconvert.ipynb"
+      File.delete("public/python_nb/outbook.nbconvert.ipynb")
+    end
+
+    html_output = call_ipython(test, params[k0], params[k1], params[k2])
     # TODO check for success
 
     #redirect_to html_output
@@ -365,22 +371,25 @@ class DataFilesController < ApplicationController
 
   protected
 
-  def call_ipython(test, xparams, yparams)
-    Rails.logger.debug "xparams: " + xparams.to_s
-    Rails.logger.debug "yparams: " + yparams.to_s
+  def call_ipython(test, xparams, yparams, zparams)
+    #Rails.logger.debug "xparams: " + xparams.to_s
+    #Rails.logger.debug "yparams: " + yparams.to_s
+    #Rails.logger.debug "zparams: " + zparams.to_s
 
     # location of the convert command to be run
     command = Settings.defaults[:nbconvert_path]
 
-    # server tmp location
-    tmp_dir =  Settings.defaults[:python_nb_tmp]
+    # server script location
+    py_dir =  Settings.defaults[:python_nb_tmp]
 
-    Rails.logger.info "nbconvert_path: " + command + "\ntmp: " + tmp_dir
+    Rails.logger.info "nbconvert_path: " + command + "\npy_dir: " + py_dir
     # location of the notebook into which parameters will be inserted
     if test == "ttest"
-      notebook = tmp_dir + '/T_test.ipynb'
+      notebook = py_dir + '/T_test.ipynb'
     elsif test == "1wanova"
-      notebook = tmp_dir + '/anova.ipynb'
+      notebook = py_dir + '/anova.ipynb'
+    elsif test == "kruskal"
+      notebook = py_dir + '/kruskal.ipynb'
     else
       Rails.logger.error "ERROR: " + test + " not implemented."
       return
@@ -393,12 +402,12 @@ class DataFilesController < ApplicationController
     #??? outbook = tmp_dir + '/outbook_' + timestamp + '.ipynb'
 
 
-    outbook = tmp_dir + '/outbook.ipynb'
+    outbook = py_dir + '/outbook.ipynb'
 
     # the outbook needs to be run in order to update the results
     # FIX ME use tempfile for outbook_processed location
     # ??? outbook_processed = tmp_dir + '/outbook_' + timestamp + '.nbconvert.ipynb'
-    outbook_processed = tmp_dir + '/outbook.nbconvert.ipynb'
+    outbook_processed = py_dir + '/outbook.nbconvert.ipynb'
 
     #
     #  Actual work starts here
@@ -414,8 +423,13 @@ class DataFilesController < ApplicationController
     # Put the input strings as python program into the first cell
     # parameters end up in x and y
     # works now, needs to be generalized
-    json_notebook["cells"][1]["source"]="data1=#{xparams}\ndata2=#{yparams}\n";
-
+    if test == "ttest"
+      json_notebook["cells"][1]["source"]="data1=#{xparams}\ndata2=#{yparams}\n";
+    elsif test == "1wanova"
+      json_notebook["cells"][1]["source"]="keys=#{xparams}\ndata=#{yparams}\n";
+    elsif test == "kruskal"
+      json_notebook["cells"][1]["source"]="keys=#{xparams}\ndata=#{yparams}\n";
+    end
     # FIX ME needs error checking. What happens if file cannot be opened?
     outfile = File.new(outbook,"w")
 
