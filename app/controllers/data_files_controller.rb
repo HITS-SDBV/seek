@@ -426,7 +426,7 @@ class DataFilesController < ApplicationController
     if test == "ttest"
       json_notebook["cells"][1]["source"]="data1=#{xparams}\ndata2=#{yparams}\n";
     elsif test == "1wanova"
-      json_notebook["cells"][1]["source"]="keys=#{xparams}\ndata=#{yparams}\n";
+      json_notebook["cells"][2]["source"]="keys=#{xparams}\ndata=#{yparams}\n";
     elsif test == "kruskal"
       json_notebook["cells"][1]["source"]="keys=#{xparams}\ndata=#{yparams}\n";
     end
