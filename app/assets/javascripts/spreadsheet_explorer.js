@@ -706,23 +706,25 @@ function send_to_python(){
 
     data['test'] = test;
 
-    $j.post("pythonize",  data)
-	.done(function(){
-	    console.log("successfully posted to \"pythonize\".");
-	    var date = new Date();
-	    var ipynb_html = "/python_nb/outbook.nbconvert.html?";
-	    var ipynb_path = ipynb_html.replace("html?", "ipynb");
-	    var new_page = window.open(ipynb_html+ date.getTime());
-	    //$j('#py_png_dl > img').remove();
-	    //$j("#ipython_figure_container").show();
-	    //load_image_and_hrefs(date.getTime(), ipynb_path);
-	})
-	.fail(function(){
-	    console.error("TO DO: why does it fail?");
-	    alert("TO DO: why does it fail?");
-	})
-}
+    if ( data['test'] != 'Please select') {
+	$j.post("pythonize",  data)
+	    .done(function(){
+		console.log("successfully posted to \"pythonize\".");
+		var date = new Date();
+		var ipynb_html = "/python_nb/outbook.nbconvert.html?";
+		var ipynb_path = ipynb_html.replace("html?", "ipynb");
+		var new_page = window.open(ipynb_html+ date.getTime());
+		//$j('#py_png_dl > img').remove();
+		//$j("#ipython_figure_container").show();
+		//load_image_and_hrefs(date.getTime(), ipynb_path);
+	    })
+	    .fail(function(){
+		console.error("EE: Why does it fail?");
+		alert("Something failed. Please contact the developers.");
 
+	    })
+    }
+}
 
 function deselect_cells() {
     //Deselect any cells and headings

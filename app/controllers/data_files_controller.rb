@@ -32,6 +32,9 @@ class DataFilesController < ApplicationController
     k2 = params.keys[2]
     test = params['test']
 
+
+    # delete intermediate files, in case call_ipython fails.
+    # TODO: maybe this should be done earlier 
     if File.exist?("public/python_nb/outbook.nbconvert.html")
       puts "deleted outbook.nbconvert.html"
       File.delete("public/python_nb/outbook.nbconvert.html")
