@@ -31,14 +31,14 @@
     :title => "Performs a Kruskal-Wallis H-test on the selection", :class => "spreadsheet_button requires_selection" %>
     -->
     <%= select_tag(
-	'application_stage',
-	options_for_select(
-	[['ttest'],['1wanova'],['kruskal']]
-	),
-	prompt: "Please select",
-	class: '',
-	id: 'stats_dropdown',
-	:onchange => "send_to_python()"
+	     'application_stage',
+	      options_for_select(
+	         [['ttest'],['1wanova'],['kruskal']]
+	        ),
+	         prompt: "Please select",
+	         class: '',
+	         id: 'stats_dropdown',
+	         :onchange => "send_to_python()"
 	) %>
     <!-- , :onclick =>"send_to_python(); return false;" :target => '_blank', -->
   </div>

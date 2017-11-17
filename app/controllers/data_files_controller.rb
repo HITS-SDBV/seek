@@ -27,29 +27,47 @@ class DataFilesController < ApplicationController
   include Seek::IsaGraphExtensions
 
   def pythonize
-    k0 = params.keys[0]
-    k1 = params.keys[1]
-    k2 = params.keys[2]
+    # FIXME: Clean up!
     test = params['test']
 
-
+    # FIXME: why use this location?
+    #name_of_outfile = "public/python_nb/outbook.nbconvert.ipynb"
+    #name_of_outfile_html = "public/python_nb/outbook.nbconvert.html"
     # delete intermediate files, in case call_ipython fails.
-    # TODO: maybe this should be done earlier 
-    if File.exist?("public/python_nb/outbook.nbconvert.html")
-      puts "deleted outbook.nbconvert.html"
-      File.delete("public/python_nb/outbook.nbconvert.html")
-    end
-    if File.exist?("public/python_nb/outbook.nbconvert.ipynb")
-      puts "deleted outbook.nbconvert.ipynb"
-      File.delete("public/python_nb/outbook.nbconvert.ipynb")
-    end
+    # TODO: maybe this should be done earlier
+    # FIXME: This is really scary programming. There is a file with an undefined lifetime
+    # FIXME: Just one per session
+    #if File.exist?(name_of_outfile)
+    #  puts "deleted #{name_of_outfile_html}"
+    #  File.delete(name_of_outfile_html)
+    #end
+    #if File.exist?(name_of_outfile)
+    #  puts "deleted #{name_of_outfile}"
+    #  File.delete(name_of_outfile)
+    #end
 
-    html_output = call_ipython(test, params[k0], params[k1], params[k2])
+    name_of_outfile_html = call_ipython(test,params)
     # TODO check for success
 
-    #redirect_to html_output
+    # redirect_to html_output
     # TODO redirect to a variable html filename based on a timestamp or tmp-stamp generation.
-    redirect_to "/python_nb/outbook.nbconvert.html"
+    # FIXME thats not the way you do it.
+    # FIXME read the file and output it
+    #redirect_to "/python_nb/outbook.nbconvert.html"
+    #Rails.logger.debug "Before reading iPython results"
+
+    #Rails.logger.debug "The content"
+    #Rails.logger.debug scontent
+    #Rails.logger.debug "/The content"
+
+    if File.exist?(name_of_outfile_html)
+      # from https://stackoverflow.com/questions/130948/read-binary-file-as-string-in-ruby
+      contents = File.open(name_of_outfile_html, 'rb') { |f| f.read }
+      render :body => contents
+    else
+      render :text => "Processing the notebook for #{test} failed."
+    end
+
   end
 
   def plot
@@ -374,7 +392,9 @@ class DataFilesController < ApplicationController
 
   protected
 
-  def call_ipython(test, xparams, yparams, zparams)
+  # FIXME why limitation to xparams, yparams, zparams?
+  # FIXME transfer all
+  def call_ipython(test, json_parameters)
     #Rails.logger.debug "xparams: " + xparams.to_s
     #Rails.logger.debug "yparams: " + yparams.to_s
     #Rails.logger.debug "zparams: " + zparams.to_s
@@ -383,42 +403,56 @@ class DataFilesController < ApplicationController
     command = Settings.defaults[:nbconvert_path]
 
     # server script location
-    py_dir =  Settings.defaults[:python_nb_tmp]
+    py_dir_in =  Settings.defaults[:python_nb_basedir]
+    py_dir_out =  Settings.defaults[:python_nb_tmp]
 
-    Rails.logger.info "nbconvert_path: " + command + "\npy_dir: " + py_dir
+    Rails.logger.info "nbconvert_path: " + command + "\npy_dir: " + py_dir_in
     # location of the notebook into which parameters will be inserted
+    # TODO infer names to show instead of hardcoded
     if test == "ttest"
-      notebook = py_dir + '/T_test.ipynb'
+      notebook = py_dir_in + '/T_test.ipynb'
     elsif test == "1wanova"
-      notebook = py_dir + '/anova.ipynb'
+      notebook = py_dir_in + '/anova.ipynb'
     elsif test == "kruskal"
-      notebook = py_dir + '/kruskal.ipynb'
+      notebook = py_dir_in + '/kruskal.ipynb'
     else
       Rails.logger.error "ERROR: " + test + " not implemented."
       return
     end
 
-    timestamp = Time.now.to_i.to_s
 
     # location of the notebook with the inserted parameters
     # FIX ME use tempfile for outbook location
     #??? outbook = tmp_dir + '/outbook_' + timestamp + '.ipynb'
 
 
-    outbook = py_dir + '/outbook.ipynb'
+    # outbook = py_dir_out + '/outbook.ipynb'
+    # https://stackoverflow.com/questions/13787746/creating-a-thread-safe-temporary-file-name
+    outbook = Dir::Tmpname.make_tmpname([py_dir_out + '/seek-notebook-base', '.ipynb'], nil)
+
+    # this is where the ipython notebook reads the json from (need path relative to notebook)
+    readjson = Dir::Tmpname.make_tmpname(['./seek-notebook-data-json', '.json'], nil)
+    # this is where we write the json to (need path relative to app)
+    outjson = py_dir_out + "/" + readjson
+    # FIXME needs error checking. What happens if file cannot be opened?
+    outjsonfile = File.new(outjson,"w")
+    outjsonfile.write(JSON.generate(json_parameters))
+    outjsonfile.close()
+
+
+
+    #
+    #  Actual work starts here
 
     # the outbook needs to be run in order to update the results
     # FIX ME use tempfile for outbook_processed location
     # ??? outbook_processed = tmp_dir + '/outbook_' + timestamp + '.nbconvert.ipynb'
-    outbook_processed = py_dir + '/outbook.nbconvert.ipynb'
-
-    #
-    #  Actual work starts here
-    # FIX ME make this a methods
-
+    # FIXME use proper temporary file creation
+    # outbook_processed = py_dir_out + '/outbook.nbconvert.ipynb'
+    outbook_processed_name = Dir::Tmpname.make_tmpname(['./seek-notebook-processed', '.ipynb'], nil)
+    outbook_processed_path = py_dir_out + "/" + outbook_processed_name;
     # Read the notebook from file into a string
     notebook_source = File.read(notebook);
-
     # parse the notebook
     json_notebook = JSON.parse(notebook_source);
     notebook_source = '' # free the notebook source to save memory
@@ -426,41 +460,57 @@ class DataFilesController < ApplicationController
     # Put the input strings as python program into the first cell
     # parameters end up in x and y
     # works now, needs to be generalized
-    if test == "ttest"
-      json_notebook["cells"][1]["source"]="data1=#{xparams}\ndata2=#{yparams}\n";
-    elsif test == "1wanova"
-      json_notebook["cells"][2]["source"]="keys=#{xparams}\ndata=#{yparams}\n";
-    elsif test == "kruskal"
-      json_notebook["cells"][1]["source"]="keys=#{xparams}\ndata=#{yparams}\n";
-    end
-    # FIX ME needs error checking. What happens if file cannot be opened?
+
+    # cell 0
+    cell_code =<<-ENDCELL
+
+import json
+
+seek_f = open('#{readjson}')
+# now read the file
+seek_f_content = seek_f.read();
+seek_f_json = json.loads(seek_f_content);
+
+# print for debugging purposes. Also interesting for the user, so leave in.
+print(seek_f_json)
+ENDCELL
+
+    Rails.logger.info(cell_code);
+
+    json_notebook["cells"][1]["source"]=cell_code;
+
+    # FIXME needs error checking. What happens if file cannot be opened?
     outfile = File.new(outbook,"w")
 
     # this writes the modified book
     outfile.write(JSON.generate(json_notebook))
     outfile.close()
 
+
+
     # run scripts:
-    # seems to be the safest way to run ruby commands according to
+    # seems to be the safest way to run ruby commands according to WHOM?
     # first run the notebook!
-    puts "*** running the notebook: #{command} #{outbook} --to notebook --execute"
-    Rails.logger.info "Running:  #{command} #{outbook} --to notebook --execute"
-    result = `#{command} #{outbook} --to notebook --execute`
-    puts result
+    puts "*** running the notebook: #{command} #{outbook} --to notebook --execute --output=#{outbook_processed_name}"
+    Rails.logger.info "Running:  #{command} #{outbook} --to notebook --execute --output=#{outbook_processed_name}"
+    result = `#{command} #{outbook} --to notebook --execute --allow-errors --output=#{outbook_processed_name}`
+    Rails.logger.info result
     # then turn it into HTML
     # One alternative way to do it would be to run the script.
     # however, I do not know how you would get the plot.
-    puts "*** converting notebook to HTML:  #{command} #{outbook_processed} --to html"
+    Rails.logger.info "*** converting notebook to HTML:  #{command} #{outbook_processed_path} --to html"
 
-    result = `#{command} #{outbook_processed} --to html`
+    result = `#{command} #{outbook_processed_path} --to html`
 
-    puts result
+    Rails.logger.info result
 
     # Maybe some fishing inside the notebook in order to isolate the result of the last cell
 
     #redirect here eventually
-    outbook_processed.sub('.ipynb', '.html').sub('./public','')
-
+    retval = outbook_processed_path.sub(/.ipynb/, '.html')
+    Rails.logger.info "Processed: "
+    Rails.logger.info retval;
+    return retval;
 end
 
 def translate_action(action)

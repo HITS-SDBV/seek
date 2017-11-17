@@ -668,60 +668,70 @@ function select_range(range, sheetNumber, multiple, from_text) {
     }
 }
 
-function read_data() {
+// added by WM to read data with numbered marked columns and more explicit
+// key data structure
+function read_data_numbered() {
     //var col_header_cells = $j("table.active_sheet tr").first().children("td");
     var selected_cells = $j("table.active_sheet tr").children("td.selected_cell");
 
-    var data_obj = new Object();
+    var data_obj = [];
 
-    // generate the keys from the column headings ('A', 'B', ...)  and fill with content of cells
-    $j.each(selected_cells, function(k) {
-	//console.log(selected_cells[k].id,  selected_cells[k].innerHTML);
-	var ccol = selected_cells[k].id.split("_")[1].replace(/[0-9]/g,'');
-	if (data_obj[ccol] == undefined) {data_obj[ccol] = new Array();}
-	data_obj[ccol].push(selected_cells[k].innerHTML);
-    });
-    //get rid of first value which is assumed to be column name
-    // TODO return the namesfor plotting etc.
-    //var col_headers = new Array();
-    $j.each(data_obj, function(k) {
-	//col_headers.push(data_obj[k][0]);
-	data_obj[k] = data_obj[k].slice(1);
+    // generate the keys from the column headings ('A', 'B', ...)
+    // and fill with content of cells
+
+    var data_keys = {};
+
+    key_counter = 0;
+    $j.each(selected_cells, function(each_index) {
+
+          var column_key = selected_cells[each_index].id.split("_")[1].replace(/[0-9]/g,'');
+
+          // please note that this means that the array is
+          // populated from front
+          if(data_keys[column_key] == undefined){
+            data_keys[column_key]=key_counter;
+            key_counter++;
+          }
+
+          effective_key = data_keys[column_key];
+          // please note that this means that the array is
+          // populated from front
+        	if (data_obj[effective_key] == undefined) {
+              data_obj[effective_key] = { "key" : column_key,
+                                                  "values" : []
+                                                };
+          }
+
+        	data_obj[effective_key]["values"].push(selected_cells[each_index].innerHTML);
     });
     return data_obj;
-    //return JSON.stringify(data_obj);
 }
 
 
 // parameter test is a string specifying which test to perform. one of 'ttest', '1wanova'
 function send_to_python(){
-    data = read_data();
+    data = {"marked" : read_data_numbered()};
     test=$j("#stats_dropdown option:selected").text();
 
-    if (Object.keys(data).length == 0 ) {
-	console.error("Data object was empty. Probably no columns were marked.");
-	alert("Data object was empty. Probably no columns were marked.");
-	return;
+    if (data["marked"].length == 0 ) {
+      	console.error("Data object was empty. Probably no columns were marked.");
+      	alert("Data object was empty. Probably no columns were marked.");
+      	return;
     }
-
+    // write test method into query json
     data['test'] = test;
 
+    // shitty test for selection
     if ( data['test'] != 'Please select') {
-	$j.post("pythonize",  data)
-	    .done(function(){
-		console.log("successfully posted to \"pythonize\".");
-		var date = new Date();
-		var ipynb_html = "/python_nb/outbook.nbconvert.html?";
-		var ipynb_path = ipynb_html.replace("html?", "ipynb");
-		var new_page = window.open(ipynb_html+ date.getTime());
-		//$j('#py_png_dl > img').remove();
-		//$j("#ipython_figure_container").show();
-		//load_image_and_hrefs(date.getTime(), ipynb_path);
-	    })
-	    .fail(function(){
-		console.error("EE: Why does it fail?");
-		alert("Something failed. Please contact the developers.");
-
+	     $j.post("pythonize",  data)
+	         .done(function(data){
+		           console.log("successfully posted to \"pythonize\".");
+		           var date = new Date();
+               var myWindow = window.open("");
+               myWindow.document.write(data);
+	    }).fail(function(){
+		      console.error("EE: Why does it fail?");
+		      alert("Something failed. Please contact the developers.");
 	    })
     }
 }
