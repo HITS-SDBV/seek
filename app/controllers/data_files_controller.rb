@@ -409,16 +409,23 @@ class DataFilesController < ApplicationController
     Rails.logger.info "nbconvert_path: " + command + "\npy_dir: " + py_dir_in
     # location of the notebook into which parameters will be inserted
     # TODO infer names to show instead of hardcoded
-    if test == "ttest"
-      notebook = py_dir_in + '/T_test.ipynb'
-    elsif test == "1wanova"
-      notebook = py_dir_in + '/anova.ipynb'
-    elsif test == "kruskal"
-      notebook = py_dir_in + '/kruskal.ipynb'
-    else
+
+    notebook_spec = false;
+    Settings.defaults[:python_nb_notebooks].each do |notebook_test|
+      if test == notebook_test["id"]
+            notebook_spec = notebook_test;
+      end
+    end
+
+    Rails.logger.info "Notebook Specification from config file: #{notebook_spec}"
+
+    unless notebook_spec
       Rails.logger.error "ERROR: " + test + " not implemented."
       return
     end
+
+    notebook = py_dir_in + '/' + notebook_spec[:script]
+
 
 
     # location of the notebook with the inserted parameters
@@ -477,7 +484,8 @@ ENDCELL
 
     Rails.logger.info(cell_code);
 
-    json_notebook["cells"][1]["source"]=cell_code;
+    # processing: replace cell as specified in config file
+    json_notebook["cells"][notebook_spec[:cell]]["source"]=cell_code;
 
     # FIXME needs error checking. What happens if file cannot be opened?
     outfile = File.new(outbook,"w")
