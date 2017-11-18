@@ -709,9 +709,9 @@ function read_data_numbered() {
 
 
 // parameter test is a string specifying which test to perform. one of 'ttest', '1wanova'
-function send_to_python(){
+function send_to_python(test){
     data = {"marked" : read_data_numbered()};
-    test=$j("#stats_dropdown option:selected").text();
+    //test=$j("#stats_dropdown option:selected").text();
 
     if (data["marked"].length == 0 ) {
       	console.error("Data object was empty. Probably no columns were marked.");
