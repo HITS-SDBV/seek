@@ -138,7 +138,7 @@ source 'https://rails-assets.org' do
 end
 
 group :production do
-  gem 'passenger'
+  gem 'passenger' , '~> 5.1.12'
   gem 'puma'
   gem 'system'
 end
