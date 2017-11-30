@@ -486,7 +486,7 @@ GEM
       mime-types
     parser (2.4.0.0)
       ast (~> 2.2)
-    passenger (5.1.2)
+    passenger (5.1.12)
       rack
       rake (>= 0.8.1)
     path_expander (1.0.1)
@@ -912,7 +912,7 @@ DEPENDENCIES
   omniauth-ldap (~> 1.0.5)
   openseek-api
   paperclip (~> 4.2.0)
-  passenger
+  passenger (~> 5.1.12)
   pg
   pothoven-attachment_fu
   progress_bar
@@ -979,4 +979,4 @@ DEPENDENCIES
   zenodo-client!
 
 BUNDLED WITH
-   1.15.3
+   1.16.0
