@@ -3,6 +3,11 @@
     "id": "1039986486",
     "type": "assays",
     "attributes": {
+      "policy":
+      {
+        "access":"no_access",
+        "permissions":[]
+      },
       "tags": [
         "Assay-tag1",
         "Assay-tag2",
@@ -108,13 +113,12 @@
         ]
       },
       "publications": {
-        "data": []
-      },
-      "strains": {
-        "data": []
-      },
-      "samples": {
-        "data": []
+        "data": [
+          {
+            "id": "1055250468",
+            "type": "publications"
+          }
+        ]
       }
     },
     "links": {

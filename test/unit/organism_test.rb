@@ -107,7 +107,7 @@ class OrganismTest < ActiveSupport::TestCase
     RDF::Reader.for(:rdfxml).new(rdf) do |reader|
       assert reader.statements.count >= 1
       assert_equal RDF::URI.new("http://localhost:3000/organisms/#{object.id}"), reader.statements.first.subject
-      assert reader.has_triple? ["http://localhost:3000/organisms/#{object.id}", Seek::Rdf::JERMVocab.NCBI_ID, 'http://purl.bioontology.org/ontology/NCBITAXON/2287']
+      assert reader.has_triple? ["http://localhost:3000/organisms/#{object.id}", Seek::Rdf::JERMVocab.NCBI_ID, RDF::Literal::AnyURI.new('http://purl.bioontology.org/ontology/NCBITAXON/2287')]
     end
   end
 
@@ -240,4 +240,31 @@ class OrganismTest < ActiveSupport::TestCase
     x.save
     assert_equal x.uuid, uuid
   end
+
+  test 'ncbi_id nil for organism with blank concept id or ontology id' do
+    x = Factory(:organism_with_blank_concept)
+    assert_equal '', x.bioportal_concept.concept_uri
+    assert_nil x.ncbi_id
+    assert_nil x.ncbi_uri
+
+    o = Factory(:organism,concept_uri:'')
+    assert_nil o.ncbi_id
+    assert_nil o.ncbi_uri
+  end
+
+  test 'can have more than one organism with no concept' do
+    Factory.create(:organism, concept_uri: '')
+    org = Factory.build(:organism, concept_uri: '')
+
+    assert org.valid?
+  end
+
+  test 'none blank concept uris must be unique' do
+    o = Factory.create(:organism, concept_uri: 'http://purl.bioontology.org/ontology/NCBITAXON/562')
+    assert o.valid?
+    o2 = Factory.build(:organism, concept_uri: 'http://purl.bioontology.org/ontology/NCBITAXON/562')
+    refute o2.valid?
+  end
+
+
 end

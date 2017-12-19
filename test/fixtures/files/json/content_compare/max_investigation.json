@@ -3,6 +3,11 @@
     "id": "1039986486",
     "type": "investigations",
     "attributes": {
+      "policy":
+      {
+        "access":"no_access",
+        "permissions":[]
+      },
       "tags": ["Investigation-tag1", "Investigation-tag2", "Investigation-tag3", "Investigation-tag4", "Investigation-tag5"],
       "title": "A Maximal Investigation",
       "description": "Investigation of the Human Genome"
@@ -45,22 +50,52 @@
         ]
       },
       "studies": {
-        "data": []
+        "data": [
+          {
+            "id": "980191497",
+            "type": "studies"
+          }
+        ]
       },
       "assays": {
-        "data": []
+        "data": [
+          {
+            "id": "980191497",
+            "type": "assays"
+          }
+        ]
       },
       "data_files": {
-        "data": []
+        "data": [
+          {
+            "id": "883654316",
+            "type": "data_files"
+          }
+        ]
       },
       "models": {
-        "data": []
+        "data": [
+          {
+            "id": "1004285611",
+            "type": "models"
+          }
+        ]
       },
       "sops": {
-        "data": []
+        "data": [
+          {
+            "id": "1055250468",
+            "type": "sops"
+          }
+        ]
       },
       "publications": {
-        "data": []
+        "data": [
+          {
+            "id": "1055250468",
+            "type": "publications"
+          }
+        ]
       }
     },
     "links": {

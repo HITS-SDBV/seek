@@ -1372,14 +1372,13 @@ class AssaysControllerTest < ActionController::TestCase
   def edit_max_object(assay)
     add_tags_to_test_object(assay)
     add_creator_to_test_object(assay)
-    df = Factory(:data_file, policy: Factory(:public_policy))
-    model = Factory(:model, policy: Factory(:public_policy))
-    sop = Factory(:sop, policy: Factory(:public_policy))
+
     org = Factory(:organism)
     assay.associate_organism(org)
-    assay.associate(df)
-    assay.associate(model)
-    assay.associate(sop)
+    assay.contributor = User.current_user.person
+    assay.save
+    login_as(User.current_user)
+
   end
 
   test 'add data file button' do
@@ -1443,4 +1442,20 @@ class AssaysControllerTest < ActionController::TestCase
     end
   end
 
+  test 'can delete an assay with subscriptions' do
+    assay = Factory(:assay, policy: Factory(:public_policy, access_type: Policy::VISIBLE))
+    p = Factory(:person)
+    Factory(:subscription, person: assay.contributor, subscribable: assay)
+    Factory(:subscription, person: p, subscribable: assay)
+
+    login_as(assay.contributor)
+
+    assert_difference('Subscription.count', -2) do
+      assert_difference('Assay.count', -1) do
+        delete :destroy, id: assay.id
+      end
+    end
+
+    assert_redirected_to assays_path
+  end
 end

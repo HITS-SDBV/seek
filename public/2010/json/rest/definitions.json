@@ -184,10 +184,49 @@
             "required" : [ "original_filename", "url", "md5sum", "sha1sum", "content_type", "link", "size" ],
             "additionalProperties" : false
           }
+        },
+        "policy" : {
+          "$ref" : "#/definitions/policy"
         }
       },
       "required" : [ "title", "license", "latest_version", "versions", "version", "created_at", "updated_at", "content_blobs" ],
       "additionalProperties" : false
+    },
+    "policy" : {
+      "type" : "object",
+      "properties" : {
+        "access" : {
+          "$ref" : "#/definitions/accessType"
+        },
+        "permissions" : {
+          "type" : "array",
+          "minItems" : 0,
+          "uniqueItems" : true,
+          "items" : {
+            "properties" : {
+              "resource_type": {
+                "$ref": "#/definitions/nonEmptyString"
+              },
+              "resource_id": {
+                "$ref": "#/definitions/nonEmptyString"
+              },
+              "access": {
+                "$ref": "#/definitions/accessType"
+              }
+            },
+            "required" : [ "resource_type", "resource_id", "access" ],
+            "additionalProperties" : false
+          }
+          }
+        },
+      "required" : [ "access", "permissions"],
+      "additionalProperties" : false
+    },
+    "accessType" : {
+      "type": "string",
+      "minLength": 1,
+      "enum": ["manage", "edit", "download", "view", "no_access"
+      ]
     },
     "modelAttributes" : {
       "type" : "object",
@@ -281,6 +320,9 @@
         },
         "environment": {
           "$ref": "#/definitions/nullableNonEmptyString"
+        },
+        "policy" : {
+          "$ref" : "#/definitions/policy"
         }
       },
       "required": [
@@ -619,33 +661,6 @@
       "required" : [ "data" ],
       "additionalProperties" : false
     },
-    "sampleType" : {
-      "type" : "string",
-      "minLength" : 1,
-      "enum" : [ "samples" ]
-    },
-    "sampleReference" : {
-      "properties" : {
-        "id" : {
-          "$ref" : "#/definitions/nonEmptyString"
-        },
-        "type" : {
-          "$ref" : "#/definitions/sampleType"
-        }
-      },
-      "required" : [ "id", "type" ],
-      "additionalProperties" : false
-    },
-    "sampleReferencesList" : {
-      "type" : "object",
-      "properties" : {
-        "data" : {
-          "$ref" : "#/definitions/sampleReferences"
-        }
-      },
-      "required" : [ "data" ],
-      "additionalProperties" : false
-    },
     "sampleTypeType" : {
       "type" : "string",
       "minLength" : 1,
@@ -683,33 +698,6 @@
       "properties" : {
         "data" : {
           "$ref" : "#/definitions/sopReferences"
-        }
-      },
-      "required" : [ "data" ],
-      "additionalProperties" : false
-    },
-    "strainType" : {
-      "type" : "string",
-      "minLength" : 1,
-      "enum" : [ "strains" ]
-    },
-    "strainReference" : {
-      "properties" : {
-        "id" : {
-          "$ref" : "#/definitions/nonEmptyString"
-        },
-        "type" : {
-          "$ref" : "#/definitions/strainType"
-        }
-      },
-      "required" : [ "id", "type" ],
-      "additionalProperties" : false
-    },
-    "strainReferencesList" : {
-      "type" : "object",
-      "properties" : {
-        "data" : {
-          "$ref" : "#/definitions/strainReferences"
         }
       },
       "required" : [ "data" ],
@@ -1076,14 +1064,6 @@
       "required" : [ "id", "type" ],
       "additionalProperties" : false
     },
-    "sampleReferences" : {
-      "type" : "array",
-      "minItems" : 0,
-      "uniqueItems" : true,
-      "items" : {
-        "$ref" : "#/definitions/sampleReference"
-      }
-    },
     "sampleTypeReferences" : {
       "type" : "array",
       "minItems" : 0,
@@ -1111,14 +1091,6 @@
       },
       "required" : [ "id", "type" ],
       "additionalProperties" : false
-    },
-    "strainReferences" : {
-      "type" : "array",
-      "minItems" : 0,
-      "uniqueItems" : true,
-      "items" : {
-        "$ref" : "#/definitions/strainReference"
-      }
     },
     "studyReferences" : {
       "type" : "array",
@@ -1210,6 +1182,9 @@
                   },
                   "required" : [ "label", "uri" ],
                   "additionalProperties" : false
+                },
+                "policy" : {
+                  "$ref" : "#/definitions/policy"
                 }
               },
               "required" : [ "title", "assay_class", "assay_type", "technology_type" ],
@@ -1250,15 +1225,9 @@
                 },
                 "publications" : {
                   "$ref" : "#/definitions/publicationReferencesList"
-                },
-                "strains" : {
-                  "$ref" : "#/definitions/strainReferencesList"
-                },
-                "samples" : {
-                  "$ref" : "#/definitions/sampleReferencesList"
                 }
               },
-              "required" : [ "creators", "submitter", "organisms", "people", "projects", "investigation", "study", "data_files", "models", "sops", "publications", "strains", "samples" ],
+              "required" : [ "creators", "submitter", "organisms", "people", "projects", "investigation", "study", "data_files", "models", "sops", "publications" ],
               "additionalProperties" : false
             },
             "links" : {
@@ -1373,12 +1342,9 @@
                 },
                 "events" : {
                   "$ref" : "#/definitions/eventReferencesList"
-                },
-                "samples" : {
-                  "$ref" : "#/definitions/sampleReferencesList"
                 }
               },
-              "required" : [ "creators", "submitter", "people", "projects", "investigations", "studies", "assays", "publications", "events", "samples" ],
+              "required" : [ "creators", "submitter", "people", "projects", "investigations", "studies", "assays", "publications", "events" ],
               "additionalProperties" : false
             },
             "links" : {
@@ -1436,6 +1402,9 @@
                 },
                 "end_date" : {
                   "$ref" : "#/definitions/dateTimeString"
+                },
+                "policy" : {
+                  "$ref" : "#/definitions/policy"
                 }
               },
               "required" : [ "title", "description", "start_date", "end_date" ],
@@ -1567,6 +1536,9 @@
                 },
                 "description" : {
                   "$ref" : "#/definitions/nullableNonEmptyString"
+                },
+                "policy" : {
+                  "$ref" : "#/definitions/policy"
                 }
               },
               "required" : [ "title" ],
@@ -1728,15 +1700,9 @@
                 },
                 "models" : {
                   "$ref" : "#/definitions/modelReferencesList"
-                },
-                "strains" : {
-                  "$ref" : "#/definitions/strainReferencesList"
-                },
-                "samples" : {
-                  "$ref" : "#/definitions/sampleReferencesList"
                 }
               },
-              "required" : [ "projects", "assays", "models", "strains", "samples" ],
+              "required" : [ "projects", "assays", "models" ],
               "additionalProperties" : false
             },
             "links" : {
@@ -1840,12 +1806,9 @@
                 },
                 "events" : {
                   "$ref" : "#/definitions/eventReferencesList"
-                },
-                "samples" : {
-                  "$ref" : "#/definitions/sampleReferencesList"
                 }
               },
-              "required" : [ "projects", "institutions", "investigations", "studies", "assays", "data_files", "models", "sops", "publications", "presentations", "events", "samples" ],
+              "required" : [ "projects", "institutions", "investigations", "studies", "assays", "data_files", "models", "sops", "publications", "presentations", "events" ],
               "additionalProperties" : false
             },
             "links" : {
@@ -2035,6 +1998,9 @@
                 },
                 "wiki_page" : {
                   "$ref" : "#/definitions/nullableUriString"
+                },
+                "default_policy" : {
+                  "$ref" : "#/definitions/policy"
                 }
               },
               "required" : [ "title", "description", "web_page", "wiki_page" ],
@@ -2079,17 +2045,11 @@
                 "events" : {
                   "$ref" : "#/definitions/eventReferencesList"
                 },
-                "strains" : {
-                  "$ref" : "#/definitions/strainReferencesList"
-                },
-                "samples" : {
-                  "$ref" : "#/definitions/sampleReferencesList"
-                },
                 "programmes" : {
                   "$ref" : "#/definitions/programmeReferencesList"
                 }
               },
-              "required" : [ "organisms", "people", "institutions", "investigations", "studies", "assays", "data_files", "models", "sops", "publications", "presentations", "events", "strains", "samples", "programmes" ],
+              "required" : [ "organisms", "people", "institutions", "investigations", "studies", "assays", "data_files", "models", "sops", "publications", "presentations", "events", "programmes" ],
               "additionalProperties" : false
             },
             "links" : {
@@ -2150,6 +2110,9 @@
                 },
                 "authors" : {
                   "$ref" : "#/definitions/nullableNonEmptyStringList"
+                },
+                "policy" : {
+                  "$ref" : "#/definitions/policy"
                 }
               },
               "required" : [ "title", "journal", "published_date", "pubmed_id", "citation", "link_to_pub" ],
@@ -2301,6 +2264,9 @@
                 },
                 "person_responsible_id" : {
                   "$ref" : "#/definitions/nullableNonEmptyString"
+                },
+                "policy" : {
+                  "$ref" : "#/definitions/policy"
                 }
               },
               "required" : [ "title", "person_responsible_id" ],

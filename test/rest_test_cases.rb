@@ -83,8 +83,7 @@ module RestTestCases
     if File.readable?(definitions_path)
       errors = JSON::Validator.fully_validate_json(definitions_path,
                                                    @response.body,
-                                                   {:fragment => fragment,
-                                                         :strict => true})
+                                                   {:fragment => fragment})
       unless errors.empty?
         msg = ""
         errors.each do |e|
@@ -161,12 +160,12 @@ module RestTestCases
       json_to_compare = JSON.parse(File.read(json_file))
       begin
         edit_max_object(object) if (m == 'max')
-      rescue NoMethodError => e
-        puts e.message
+      rescue NoMethodError
       end
 
-      get :show, id: object, format: 'json'
+      get :show, id: object , format: 'json'
       assert_response :success
+      #puts response.body
       parsed_response = JSON.parse(@response.body)
       check_content_diff(json_to_compare, parsed_response)
     end
@@ -192,12 +191,15 @@ module RestTestCases
       elsif (el["path"] =~ /avatar/)
         assert_match /^\/#{plural_obj}\/\d+\/avatars\/\d+/, el["value"]
         diff.delete(el)
+      elsif (el["path"] =~ /policy/)
+         diff.delete(el)
       end
     end
 
     diff.delete_if {
         |el| el["path"] =~ /\/id|person_responsible_id|created|updated|modified|uuid|jsonapi|self|md5sum|sha1sum/
     }
+
 
     assert_equal [], diff
   end
