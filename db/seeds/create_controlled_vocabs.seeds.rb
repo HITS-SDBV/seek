@@ -56,9 +56,7 @@ ActiveRecord::FixtureSet.create_fixtures(File.join(Rails.root, "config/default_d
 
 puts "Seeded measured items"
 
-ActiveRecord::FixtureSet.create_fixtures(File.join(Rails.root, "config/default_data"), "units")
 
-puts "Seeded units"
 
 ActiveRecord::FixtureSet.create_fixtures(File.join(Rails.root, "config/default_data"), "project_positions")
 
@@ -67,10 +65,6 @@ puts "Seeded project positions"
 ActiveRecord::FixtureSet.create_fixtures(File.join(Rails.root, "config/default_data"), "assay_classes")
 
 puts "Seeded assay classes"
-
-ActiveRecord::FixtureSet.create_fixtures(File.join(Rails.root, "config/default_data"), "relationship_types")
-
-puts "Seeded relationship types"
 
 File.open('config/default_data/expertise.list').each do |item|
   unless item.blank?

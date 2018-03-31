@@ -108,7 +108,7 @@ class DataciteDoiTest < ActionDispatch::IntegrationTest
       get "/#{type.pluralize}/#{asset.id}?version=#{asset.version}"
       assert_response :success
 
-      assert_select 'p', text: /#{doi}/
+      assert_select 'a', text: /#{doi}/
     end
   end
 
@@ -135,12 +135,12 @@ class DataciteDoiTest < ActionDispatch::IntegrationTest
 
       get "/#{type.pluralize}/#{asset.id}?version=2"
       assert_response :success
-      assert_select 'p', text: /#{doi}/
+      assert_select 'a', text: /#{doi}/
 
       get "/#{type.pluralize}/#{asset.id}?version=1"
       assert_response :success
 
-      assert_select 'p', text: /#{doi}/, count: 0
+      assert_select 'a', text: /#{doi}/, count: 0
     end
   end
 
@@ -229,7 +229,7 @@ class DataciteDoiTest < ActionDispatch::IntegrationTest
       latest_version = asset.latest_version
       latest_version.doi = '10.5072/my_test'
       assert latest_version.save
-      assert asset.is_any_doi_minted?
+      assert asset.has_doi?
 
       get "/#{type.pluralize}/#{asset.id}/edit"
 

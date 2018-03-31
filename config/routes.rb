@@ -17,28 +17,25 @@ SEEK::Application.routes.draw do
 
   root :to => "homes#index"
 
-  resource :admin do
-    member do
-      get :show
+  resource :admin, controller: 'admin' do
+    collection do
+      get :index
       get :tags
       get :features_enabled
       get :rebrand
       get :home_settings
       get :pagination
-      get :others
+      get :settings
       get :get_stats
       get :registration_form
       get :edit_tag
-      get :imprint_setting
       post :update_home_settings
       post :restart_server
       post :restart_delayed_job
-      post :get_stats
-      post :get_user_stats
       post :update_admins
       post :update_rebrand
       post :test_email_configuration
-      post :update_others
+      post :update_settings
       post :update_features_enabled
       post :update_pagination
       post :delete_tag
@@ -54,6 +51,7 @@ SEEK::Application.routes.draw do
       get :funding
       post :send_feedback
       get :imprint
+      get :about
     end
   end
 
@@ -188,6 +186,7 @@ SEEK::Application.routes.draw do
       get :admin_member_roles
       get :storage_report
       post :update_members
+      post :request_membership
       get :isa_children
     end
     resources :people,:institutions,:assays,:studies,:investigations,:models,:sops,:data_files,:presentations,
@@ -331,23 +330,9 @@ SEEK::Application.routes.draw do
 
    ### ASSAY AND TECHNOLOGY TYPES ###
 
-  resources :suggested_assay_types do
-      collection do
-        get :manage
-      end
-
-  end
-  resources :suggested_modelling_analysis_types, :path => :suggested_assay_types, :controller => :suggested_assay_types do
-     collection do
-        get :manage
-      end
-  end
-  resources :suggested_technology_types do
-    collection do
-      get :manage
-    end
-  end
-
+  resources :suggested_assay_types
+  resources :suggested_modelling_analysis_types, :path => :suggested_assay_types, :controller => :suggested_assay_types
+  resources :suggested_technology_types
 
   ### ASSETS ###
 
@@ -745,9 +730,7 @@ SEEK::Application.routes.draw do
   post '/favourite_groups/edit' => 'favourite_groups#edit', :as => :edit_favourite_group
   post '/favourite_groups/update' => 'favourite_groups#update', :as => :update_favourite_group
   delete '/favourite_groups/:id' => 'favourite_groups#destroy', :as => :delete_favourite_group
-  post 'studies/new_investigation_redbox' => 'studies#new_investigation_redbox', :as => :new_investigation_redbox
   post 'experiments/create_investigation' => 'studies#create_investigation', :as => :create_investigation
-  post '/work_groups/review/:type/:id/:access_type' => 'work_groups#review_popup', :as => :review_work_group
   # get ':controller/:id/approve_or_reject_publish' => ":controller#show" # TODO: Rails4 - Delete me?
 
   get '/signup' => 'users#new', :as => :signup
@@ -773,7 +756,7 @@ SEEK::Application.routes.draw do
 
   get "/zenodo_oauth_callback" => "zenodo/oauth2/callbacks#callback"
 
-  get "/citation/*doi(.:format)" => "citations#fetch", :as => :citation
+  get "/citation/(*doi)" => "citations#fetch", as: :citation, constraints: { doi: /.+/ }
 
   # This is a legacy wild controller route that's not recommended for RESTful applications.
   # Note: This route will make all actions in every controller accessible via GET requests.

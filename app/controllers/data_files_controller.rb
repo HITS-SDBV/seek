@@ -5,6 +5,7 @@ class DataFilesController < ApplicationController
   include Seek::IndexPager
   include SysMODB::SpreadsheetExtractor
   include MimeTypesHelper
+  include ApiHelper
 
   include Seek::AssetsCommon
 
@@ -125,6 +126,7 @@ class DataFilesController < ApplicationController
       respond_to do |format|
         if @data_file.save_as_new_version(comments)
           create_content_blobs
+
           # Duplicate studied factors
           factors = @data_file.find_version(@data_file.version - 1).studied_factors
           factors.each do |f|
@@ -199,7 +201,14 @@ class DataFilesController < ApplicationController
   end
 
   def create
-    @data_file = DataFile.new(data_file_params)
+    if params[:data_file].empty? && !params[:datafile].empty?
+      params[:data_file] = params[:datafile]
+    end
+
+     if params.key?(:content)
+        params[:content_blobs] = params[:content]["data"] #Why a string?
+     end
+      @data_file = DataFile.new(data_file_params.except!(:content))
 
     if handle_upload_data
       update_sharing_policies(@data_file)
@@ -230,6 +239,7 @@ class DataFilesController < ApplicationController
             assay_ids, relationship_types = determine_related_assay_ids_and_relationship_types(params)
             update_assay_assets(@data_file, assay_ids, relationship_types)
             format.html { redirect_to data_file_path(@data_file) }
+            format.json { render json: @data_file}
           end
         end
       else
@@ -237,6 +247,7 @@ class DataFilesController < ApplicationController
           format.html do
             render action: 'new'
           end
+          format.json {render json: "{}" } #fix
         end
 
       end
@@ -257,7 +268,11 @@ class DataFilesController < ApplicationController
   end
 
   def update
-    @data_file.attributes = data_file_params
+
+    if params[:data_file].empty? && !params[:datafile].empty?
+      params[:data_file] = params[:datafile]
+    end
+    @data_file.attributes = data_file_params.except!(:content)
 
     update_annotations(params[:tag_list], @data_file)
     update_scales @data_file
@@ -274,11 +289,12 @@ class DataFilesController < ApplicationController
 
         flash[:notice] = "#{t('data_file')} metadata was successfully updated."
         format.html { redirect_to data_file_path(@data_file) }
-
+        format.json {render json: @data_file}
       else
         format.html do
           render action: 'edit'
         end
+        format.json {} #to be decided
       end
     end
   end
@@ -333,14 +349,13 @@ class DataFilesController < ApplicationController
   end
 
   def filter
-    if params[:with_samples]
-      scope = DataFile.with_extracted_samples
-    else
-      scope = DataFile
-    end
+    scope = DataFile
+    scope = scope.joins(:projects).where(projects: { id: current_user.person.projects }) unless (params[:all_projects] == 'true')
+    scope = scope.where(simulation_data: true) if (params[:simulation_data] == 'true')
+    scope = scope.with_extracted_samples if (params[:with_samples] == 'true')
 
     @data_files = DataFile.authorize_asset_collection(
-      scope.where('data_files.title LIKE ?', "#{params[:filter]}%"), 'view'
+      scope.where('data_files.title LIKE ?', "%#{params[:filter]}%").uniq, 'view'
     ).first(20)
 
     respond_to do |format|
@@ -616,6 +631,7 @@ def forbid_new_version_if_samples
   end
 end
 
+<<<<<<< HEAD
 def create_notebook_url(bookKey,bookFormat)
   return "#{root_url}data_files/2/get_book?bookKey=#{bookKey};bookFormat=#{bookFormat}"
 end
@@ -699,15 +715,12 @@ def inner_get_book(key,f)
 end
 
 
-private
+  private
 
-
-
-
-def data_file_params
-  params.require(:data_file).permit(:title, :description, { project_ids: [] }, :license, :other_creators,
-                                    :parent_name, { event_ids: [] },
-                                    { special_auth_codes_attributes: [:code, :expiration_date, :id, :_destroy] })
-end
+  def data_file_params
+    params.require(:data_file).permit(:title, :description, :simulation_data, {project_ids: []}, :license, :other_creators,
+                                      :parent_name, {event_ids: []},
+                                      {special_auth_codes_attributes: [:code, :expiration_date, :id, :_destroy]})
+  end
 
 end

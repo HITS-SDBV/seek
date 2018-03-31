@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20170607095453) do
+ActiveRecord::Schema.define(version: 20171128133429) do
 
   create_table "activity_logs", force: :cascade do |t|
     t.string   "action",                 limit: 255
@@ -319,6 +319,7 @@ ActiveRecord::Schema.define(version: 20170607095453) do
     t.string   "template_name",     limit: 255,   default: "none"
     t.string   "doi",               limit: 255
     t.string   "license",           limit: 255
+    t.boolean  "simulation_data",                 default: false
   end
 
   add_index "data_file_versions", ["contributor_id", "contributor_type"], name: "index_data_file_versions_contributor", using: :btree
@@ -347,6 +348,7 @@ ActiveRecord::Schema.define(version: 20170607095453) do
     t.string   "template_name",    limit: 255,   default: "none"
     t.string   "doi",              limit: 255
     t.string   "license",          limit: 255
+    t.boolean  "simulation_data",                default: false
   end
 
   add_index "data_files", ["contributor_id", "contributor_type"], name: "index_data_files_on_contributor_id_and_contributor_type", using: :btree
@@ -774,6 +776,19 @@ ActiveRecord::Schema.define(version: 20170607095453) do
     t.boolean  "factors_studied",             default: true
   end
 
+  create_table "message_logs", force: :cascade do |t|
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.integer  "message_type",  limit: 4
+    t.text     "details",       limit: 65535
+    t.integer  "resource_id",   limit: 4
+    t.string   "resource_type", limit: 255
+    t.integer  "sender_id",     limit: 4
+  end
+
+  add_index "message_logs", ["resource_type", "resource_id"], name: "index_message_logs_on_resource_type_and_resource_id", using: :btree
+  add_index "message_logs", ["sender_id"], name: "index_message_logs_on_sender_id", using: :btree
+
   create_table "model_auth_lookup", id: false, force: :cascade do |t|
     t.integer "user_id",      limit: 4
     t.integer "asset_id",     limit: 4
@@ -944,8 +959,8 @@ ActiveRecord::Schema.define(version: 20170607095453) do
     t.string   "space_perm_id",         limit: 255
     t.string   "username",              limit: 255
     t.integer  "project_id",            limit: 4
-    t.datetime "created_at",                                      null: false
-    t.datetime "updated_at",                                      null: false
+    t.datetime "created_at"
+    t.datetime "updated_at"
     t.string   "dss_endpoint",          limit: 255
     t.string   "web_endpoint",          limit: 255
     t.integer  "refresh_period_mins",   limit: 4,   default: 120
@@ -959,6 +974,7 @@ ActiveRecord::Schema.define(version: 20170607095453) do
     t.datetime "created_at"
     t.datetime "updated_at"
     t.string   "first_letter", limit: 255
+    t.string   "uuid",         limit: 255
   end
 
   create_table "organisms_projects", id: false, force: :cascade do |t|
@@ -1284,6 +1300,7 @@ ActiveRecord::Schema.define(version: 20170607095453) do
     t.text     "description", limit: 65535
     t.datetime "created_at"
     t.datetime "updated_at"
+    t.string   "key",         limit: 255
   end
 
   create_table "relationships", force: :cascade do |t|
@@ -1317,6 +1334,8 @@ ActiveRecord::Schema.define(version: 20170607095453) do
     t.datetime "created_at",                null: false
     t.datetime "updated_at",                null: false
     t.string   "placeholder", limit: 255
+    t.text     "description", limit: 65535
+    t.string   "resolution",  limit: 255
   end
 
   create_table "sample_attributes", force: :cascade do |t|

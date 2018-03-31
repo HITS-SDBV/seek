@@ -262,6 +262,16 @@ class PublicationsControllerTest < ActionController::TestCase
     assert_match(/.*url.*/, response.body)
   end
 
+  test 'should export pre-print publication as bibtex' do
+    publication_formatter_mock
+    with_config_value :pubmed_api_email, 'fred@email.com' do
+      get :show, id: pre_print_publication_for_export_tests, format: 'bibtex'
+    end
+    assert_response :success
+    assert_match(/.*author.*/, response.body)
+    assert_match(/.*title.*/, response.body)
+  end
+
   test 'should export publication as embl' do
     publication_formatter_mock
     with_config_value :pubmed_api_email, 'fred@email.com' do
@@ -736,7 +746,7 @@ class PublicationsControllerTest < ActionController::TestCase
     get :query_authors_typeahead, format: :json, full_name: query
     assert_response :success
     authors = JSON.parse(@response.body)
-    assert_equal 0, authors.length
+    assert_equal 0, authors['data'].length
   end
 
   test 'query authors for initilization' do
@@ -784,6 +794,23 @@ class PublicationsControllerTest < ActionController::TestCase
     assert_equal '10.5072/abcd', assigns(:publication).doi
   end
 
+  def edit_max_object(pub)
+    assay = Factory(:assay, policy: Factory(:public_policy))
+    study = Factory(:study, policy: Factory(:public_policy))
+    inv = Factory(:investigation, policy: Factory(:public_policy))
+    df = Factory(:data_file, policy: Factory(:public_policy))
+    model = Factory(:model, policy: Factory(:public_policy))
+    pr = Factory(:presentation, policy: Factory(:public_policy))
+
+    pub.associate(assay)
+    pub.associate(study)
+    pub.associate(inv)
+    pub.associate(df)
+    pub.associate(model)
+    pub.associate(pr)
+
+  end
+
   private
 
   def publication_for_export_tests
@@ -791,5 +818,13 @@ class PublicationsControllerTest < ActionController::TestCase
                           abstract: 'WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD',
                           published_date: 5.days.ago.to_s(:db),
                           pubmed_id: 5)
+  end
+
+  def pre_print_publication_for_export_tests
+    Factory(:publication, title: 'A paper on blabla',
+                          abstract: 'WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD WORD',
+                          pubmed_id: nil,
+                          publication_authors: [Factory(:publication_author),
+                                                Factory(:publication_author)])
   end
 end
