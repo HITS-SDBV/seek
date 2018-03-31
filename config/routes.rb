@@ -365,6 +365,7 @@ SEEK::Application.routes.draw do
     end
     member do
       post :pythonize
+      get :get_book
       get :matching_models
       get :data
       post :check_gatekeeper_required

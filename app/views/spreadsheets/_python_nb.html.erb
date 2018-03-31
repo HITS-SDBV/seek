@@ -4,17 +4,7 @@
     <div style="float: right"><a href="#" onclick="cleanup_ipython_plot(); return false;">Close</a></div>
     <br style="clear:both"/>
   </div>
-  <div>
-
-    <button id="export_ipython_png" class="export">Export PNG </button>
-    <button id="export_ipython_nb" class="export">  Export iPython Notebook
-      <a id="ipynb_dl" href="" download hidden type='application/octet-stream'>
-      </a>
-    </button>
-  </div>
-  <div id="ipython_figure" style="">
-    <a id="py_png_dl" href="" download></a>
-  </div>
+  <!--<div id="ipython_figure"></div>-->
 </div>
 
 <script type="text/javascript">
@@ -27,8 +17,12 @@
     });
   });
   function cleanup_ipython_plot() {
-    $j('#ipython_figure_container').hide();
-    $j('#py_png_dl > img').remove();
+  // letzt hinzugefügtes löschen
+  $j('#ipython_figure_container').children().last().remove();
+  $j('#ipython_figure_container').children().last().remove();
+  $j('#ipython_figure_container').hide();
+
+  //$j('#py_png_dl > img').remove();
   }
   function load_image_and_hrefs(time, ipynb_path) {
     //add an image

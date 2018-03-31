@@ -26,6 +26,15 @@ class DataFilesController < ApplicationController
 
   include Seek::IsaGraphExtensions
 
+  def get_book
+    Rails.logger.error "get_book"
+    
+    key = params['bookKey'];
+    f = params['bookFormat'];
+
+    return inner_get_book(key,f);
+  end
+  
   def pythonize
     # FIXME: Clean up!
     test = params['test']
@@ -45,8 +54,9 @@ class DataFilesController < ApplicationController
     #  puts "deleted #{name_of_outfile}"
     #  File.delete(name_of_outfile)
     #end
-
-    name_of_outfile_html = call_ipython(test,params)
+    resultHash = call_ipython(test,params)
+    
+    name_of_outfile_html = resultHash["htmlBookPath"] 
     # TODO check for success
 
     # redirect_to html_output
@@ -60,14 +70,25 @@ class DataFilesController < ApplicationController
     #Rails.logger.debug scontent
     #Rails.logger.debug "/The content"
 
-    if File.exist?(name_of_outfile_html)
-      # from https://stackoverflow.com/questions/130948/read-binary-file-as-string-in-ruby
-      contents = File.open(name_of_outfile_html, 'rb') { |f| f.read }
-      render :body => contents
-    else
-      render :text => "Processing the notebook for #{test} failed."
+    unless(session[:jupyterInfo])
+      session[:jupyterInfo]={}
     end
+    session[:jupyterInfo][resultHash['key']]=resultHash
 
+    html_url = create_notebook_url(resultHash['key'],'html')
+    ipynb_url = create_notebook_url(resultHash['key'],'ipynb')
+    small_html_url = create_notebook_url(resultHash['key'],'smallHtml')
+
+
+    # render :text => "This is the content of Jupyter Info: #{session[:jupyterInfo]} #{html_url},#{ipynb_url}"
+
+    #return(inner_get_book(resultHash['key'],'smallHtml'))
+    render partial: 'jupyter_result', locals:{
+             small_html_url: small_html_url,
+             html_url:       html_url,
+             ipynb_url:      ipynb_url,
+           }
+    #, locals: { small_html_url: small_html_url}
   end
 
   def plot
@@ -435,6 +456,7 @@ class DataFilesController < ApplicationController
 
     # outbook = py_dir_out + '/outbook.ipynb'
     # https://stackoverflow.com/questions/13787746/creating-a-thread-safe-temporary-file-name
+    outkey = Dir::Tmpname.make_tmpname(['seek-notebook-key',".ign"],nil)
     outbook = Dir::Tmpname.make_tmpname([py_dir_out + '/seek-notebook-base', '.ipynb'], nil)
 
     # this is where the ipython notebook reads the json from (need path relative to notebook)
@@ -447,7 +469,6 @@ class DataFilesController < ApplicationController
     outjsonfile.close()
 
 
-
     #
     #  Actual work starts here
 
@@ -458,12 +479,20 @@ class DataFilesController < ApplicationController
     # outbook_processed = py_dir_out + '/outbook.nbconvert.ipynb'
     outbook_processed_name = Dir::Tmpname.make_tmpname(['./seek-notebook-processed', '.ipynb'], nil)
     outbook_processed_path = py_dir_out + "/" + outbook_processed_name;
+
+
+    outbook_small_name = Dir::Tmpname.make_tmpname(['./seek-notebook-small', '.ipynb'], nil)
+    outbook_small_path = py_dir_out + "/" + outbook_small_name;
+
+    
     # Read the notebook from file into a string
     notebook_source = File.read(notebook);
     # parse the notebook
     json_notebook = JSON.parse(notebook_source);
     notebook_source = '' # free the notebook source to save memory
 
+
+    
     # Put the input strings as python program into the first cell
     # parameters end up in x and y
     # works now, needs to be generalized
@@ -495,14 +524,17 @@ ENDCELL
     outfile.close()
 
 
-
     # run scripts:
     # seems to be the safest way to run ruby commands according to WHOM?
     # first run the notebook!
     puts "*** running the notebook: #{command} #{outbook} --to notebook --execute --output=#{outbook_processed_name}"
     Rails.logger.info "Running:  #{command} #{outbook} --to notebook --execute --output=#{outbook_processed_name}"
     result = `#{command} #{outbook} --to notebook --execute --allow-errors --output=#{outbook_processed_name}`
+
     Rails.logger.info result
+
+
+    
     # then turn it into HTML
     # One alternative way to do it would be to run the script.
     # however, I do not know how you would get the plot.
@@ -510,15 +542,27 @@ ENDCELL
 
     result = `#{command} #{outbook_processed_path} --to html`
 
+    
     Rails.logger.info result
 
     # Maybe some fishing inside the notebook in order to isolate the result of the last cell
 
+    select_cell_from_notebook(notebook_spec[:display_cell],outbook_processed_path,outbook_small_path,notebook_spec[:hide_source]);
+    result = `#{command} #{outbook_small_path} --to html`
+    
     #redirect here eventually
-    retval = outbook_processed_path.sub(/.ipynb/, '.html')
+    ipynbBookPath = outbook_processed_path;
+    htmlBookPath = outbook_processed_path.sub(/.ipynb/, '.html')
+    htmlSmallPath = outbook_small_path.sub(/.ipynb/, '.html')
     Rails.logger.info "Processed: "
-    Rails.logger.info retval;
-    return retval;
+    Rails.logger.info htmlBookPath;
+    Rails.logger.info htmlSmallPath;
+    return {
+		"ipynb" => ipynbBookPath,
+		"html" =>	 htmlBookPath,
+		"smallHtml" =>	 htmlSmallPath,
+                "key" => outkey
+    };
 end
 
 def translate_action(action)
@@ -572,7 +616,93 @@ def forbid_new_version_if_samples
   end
 end
 
+def create_notebook_url(bookKey,bookFormat)
+  return "#{root_url}data_files/2/get_book?bookKey=#{bookKey};bookFormat=#{bookFormat}"
+end
+
+def select_cell_from_notebook(cell_list, in_book_file_path, out_book_file_path,without_source)
+  Rails.logger.error "Selecting single cell from notebook: "
+  Rails.logger.error cell_list
+  Rails.logger.error in_book_file_path
+  Rails.logger.error out_book_file_path
+
+  notebook_source = File.read(in_book_file_path);
+  json_notebook = JSON.parse(notebook_source);
+
+  o = []
+
+  cell_list.each do |i|
+    Rails.logger.error i
+    Rails.logger.error json_notebook["cells"][i]['source']
+
+    if(without_source>0)
+      json_notebook["cells"][i]['source']=[]
+      #json_notebook["cells"][i].delete :source
+    end
+
+    o = o.push json_notebook["cells"][i]
+  end
+
+  
+
+  
+
+  json_notebook["cells"]=o
+
+  Rails.logger.error "Result: "
+  Rails.logger.error json_notebook["cells"]
+  Rails.logger.error "EndResult: "
+  
+  # FIXME needs error checking. What happens if file cannot be opened?
+  outfile = File.new(out_book_file_path,"w")
+  
+  # this writes the modified book
+  outfile.write(JSON.generate(json_notebook))
+  outfile.close()
+end
+
+def inner_get_book(key,f)
+  Rails.logger.error "get_book"
+  
+  file_path=""
+  ct = 'NONE'
+  if(f .eql? 'html')
+    file_path = session[:jupyterInfo][key]['html']
+    ct = 'text/html'
+  end
+  
+  if(f .eql? 'smallHtml')
+    file_path = session[:jupyterInfo][key]['smallHtml']
+    ct = 'text/html'
+  end
+    
+  if(f .eql? 'ipynb')
+    file_path = session[:jupyterInfo][key]['ipynb']
+    ct = 'application/json'
+  end
+  
+  Rails.logger.error f
+  Rails.logger.error file_path
+  Rails.logger.error ct
+  
+  Rails.logger.error "File Path #{file_path}"
+  
+  Rails.logger.error create_notebook_url(key,f);
+  
+  if File.exist?(file_path)
+    # from https://stackoverflow.com/questions/130948/read-binary-file-as-string-in-ruby
+    contents = File.open(file_path, 'rb') { |fi| fi.read }
+    render :body => contents , :content_type => ct
+  else
+    render :text => "Processing the notebook failed."
+  end
+end
+
+
 private
+
+
+
 
 def data_file_params
   params.require(:data_file).permit(:title, :description, { project_ids: [] }, :license, :other_creators,

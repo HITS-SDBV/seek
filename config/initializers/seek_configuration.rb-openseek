@@ -109,13 +109,17 @@ SEEK::Application.configure do
           :id => "ttest",
           :display_name => 'T-Test',
           :cell => 1,
-          :script => 'T_test.ipynb'
+	  :display_cell => [8,9,10,11],
+          :script => 'T_test.ipynb',
+          :hide_source => 1
         },
         {
           :id => "1wanova",
           :display_name => '1-Way ANOVA',
           :cell => 2,
-          :script => 'anova.ipynb'
+	  :display_cell => [5,6,7,11,12],
+          :script => 'anova.ipynb',
+          :hide_source => 1
         }
   ]
 

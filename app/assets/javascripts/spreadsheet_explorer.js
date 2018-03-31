@@ -727,8 +727,10 @@ function send_to_python(test){
 	         .done(function(data){
 		           console.log("successfully posted to \"pythonize\".");
 		           var date = new Date();
-               var myWindow = window.open("");
-               myWindow.document.write(data);
+		     // var myWindow = window.open("");
+		     //myWindow.document.write(data);
+		     $j('#ipython_figure_container').append(data);
+		     $j('#ipython_figure_container').show()
 	    }).fail(function(){
 		      console.error("EE: Why does it fail?");
 		      alert("Something failed. Please contact the developers.");
