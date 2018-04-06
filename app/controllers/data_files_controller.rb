@@ -631,7 +631,6 @@ def forbid_new_version_if_samples
   end
 end
 
-<<<<<<< HEAD
 def create_notebook_url(bookKey,bookFormat)
   return "#{root_url}data_files/2/get_book?bookKey=#{bookKey};bookFormat=#{bookFormat}"
 end
