@@ -109,7 +109,7 @@ SEEK::Application.configure do
           :id => "ttest",
           :display_name => 'T-Test',
           :cell => 1,
-	  :display_cell => [8,9,10,11],
+	  :display_cell => [8,12],
           :script => 'T_test.ipynb',
           :hide_source => 1
         },
