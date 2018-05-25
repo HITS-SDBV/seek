@@ -22,10 +22,12 @@ module Seek
       respond_to do |format|
         format.html
         format.xml
-        format.rdf { render template: 'rdf/show' }
-
-        format.json {render json: asset,
-                            scope: {requested_version: params[:version]}}
+        if asset.respond_to?(:to_rdf)
+          format.rdf { render template: 'rdf/show' }
+        else
+          format.rdf { render text: 'This resource does not support RDF', status: :not_acceptable, content_type: 'text/plain' }
+        end
+        format.json { render json: asset, scope: { requested_version: params[:version] } }
       end
     end
 
@@ -81,20 +83,23 @@ module Seek
           flash[:notice] = "#{t(item.class.name.underscore)} was successfully uploaded and saved."
           respond_to do |format|
             format.html { redirect_to item }
+            format.json { render json: item }
           end
         end
       else
         respond_to do |format|
-          format.html do
-            render action: 'new'
-          end
+          format.html { render action: 'new' }
+          format.json { render json: json_api_errors(item), status: :unprocessable_entity }
         end
       end
     end
 
+    #makes sure the asset it only associated with projects that match the current user
+    def filter_associated_projects(asset,user=User.current_user)
+      asset.projects = asset.projects & user.person.projects
+    end
+
     def update_sharing_policies(item)
-      Rails.logger.info("=====Policy=====")
-      Rails.logger.info(policy_params)
       item.policy.set_attributes_with_sharing(policy_params) if policy_params.present?
     end
 
@@ -122,3 +127,4 @@ module Seek
     end
   end
 end
+
