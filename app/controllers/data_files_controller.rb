@@ -694,10 +694,10 @@ import json
 seek_f = open('#{readjson}')
 # now read the file
 seek_f_content = seek_f.read();
-seek_f_json = json.loads(seek_f_content);
+seek_f_json = json.loads(seek_f_content, object_pairs_hook=OrderedDict);
 
 # print for debugging purposes. Also interesting for the user, so leave in.
-print(seek_f_json)
+#print(seek_f_json)
 ENDCELL
 
     Rails.logger.info(cell_code);
