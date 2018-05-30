@@ -602,110 +602,67 @@ class DataFilesController < ApplicationController
 
   protected
 
-  # FIXME why limitation to xparams, yparams, zparams?
-  # FIXME transfer all
   def call_ipython(test, json_parameters)
-    #Rails.logger.debug "xparams: " + xparams.to_s
-    #Rails.logger.debug "yparams: " + yparams.to_s
-    #Rails.logger.debug "zparams: " + zparams.to_s
-
-    # location of the convert command to be run
+    # location of the nbconvert command to be run
     command = Settings.defaults[:nbconvert_path]
 
-    # server script location
+    # server base script location + output dir
     py_dir_in =  Settings.defaults[:python_nb_basedir]
     py_dir_out =  Settings.defaults[:python_nb_tmp]
 
-    Rails.logger.info "nbconvert_path: " + command + "\npy_dir: " + py_dir_in
-    # location of the notebook into which parameters will be inserted
-    # TODO infer names to show instead of hardcoded
-
-    notebook_spec = false;
-    Settings.defaults[:python_nb_notebooks].each do |notebook_test|
-      if test == notebook_test["id"]
-            notebook_spec = notebook_test;
-      end
-    end
-
-    Rails.logger.info "Notebook Specification from config file: #{notebook_spec}"
-
-    unless notebook_spec
-      Rails.logger.error "ERROR: " + test + " not implemented."
+    #find the SEEK config of the test to run
+    notebook_spec = Settings.defaults[:python_nb_notebooks].detect {|nb| nb["id"] == test }
+    if notebook_spec.nil?
+      Rails.logger.error "ERROR: test " + test + " not implemented."
       return
     end
 
     notebook = py_dir_in + '/' + notebook_spec[:script]
 
+    Rails.logger.info "nbconvert_path: " + command + "\npy_dir: " + py_dir_in
+    Rails.logger.info "Notebook Specification from config file: #{notebook_spec}"
 
-
-    # location of the notebook with the inserted parameters
-    # FIX ME use tempfile for outbook location
-    #??? outbook = tmp_dir + '/outbook_' + timestamp + '.ipynb'
-
-
-    # outbook = py_dir_out + '/outbook.ipynb'
     # https://stackoverflow.com/questions/13787746/creating-a-thread-safe-temporary-file-name
     outkey = Dir::Tmpname.make_tmpname(['seek-notebook-key',".ign"],nil)
     outbook = Dir::Tmpname.make_tmpname([py_dir_out + '/seek-notebook-base', '.ipynb'], nil)
 
-    # this is where the ipython notebook reads the json from (need path relative to notebook)
+    # path to json input as needed by the ipython notebook (need path relative to notebook)
     readjson = Dir::Tmpname.make_tmpname(['./seek-notebook-data-json', '.json'], nil)
-    # this is where we write the json to (need path relative to app)
+
+    # First generate that json input from the params. need path relative to Rails app
     outjson = py_dir_out + "/" + readjson
-    # FIXME needs error checking. What happens if file cannot be opened?
-    outjsonfile = File.new(outjson,"w")
-    outjsonfile.write(JSON.generate(json_parameters))
-    outjsonfile.close()
+    session.delete :extraction_exception_message
+    begin
+      outjsonfile = File.new(outjson,"w")
+      outjsonfile.write(JSON.generate(json_parameters))
+      outjsonfile.close()
+    rescue Exception => e
+      ExceptionNotifier.notify_exception(e, data: {
+          message: "Jupyter notebooks: Error writing temporary json output:  #{outjsonfile}",
+          current_logged_in_user: current_user
+      })
+      session[:extraction_exception_message] = e.message
+    end
 
-
-    #
-    #  Actual work starts here
-
-    # the outbook needs to be run in order to update the results
-    # FIX ME use tempfile for outbook_processed location
-    # ??? outbook_processed = tmp_dir + '/outbook_' + timestamp + '.nbconvert.ipynb'
-    # FIXME use proper temporary file creation
-    # outbook_processed = py_dir_out + '/outbook.nbconvert.ipynb'
     outbook_processed_name = Dir::Tmpname.make_tmpname(['./seek-notebook-processed', '.ipynb'], nil)
-    outbook_processed_path = py_dir_out + "/" + outbook_processed_name;
-
+    outbook_processed_path = py_dir_out + "/" + outbook_processed_name
 
     outbook_small_name = Dir::Tmpname.make_tmpname(['./seek-notebook-small', '.ipynb'], nil)
-    outbook_small_path = py_dir_out + "/" + outbook_small_name;
+    outbook_small_path = py_dir_out + "/" + outbook_small_name
 
-    
-    # Read the notebook from file into a string
-    notebook_source = File.read(notebook);
-    # parse the notebook
-    json_notebook = JSON.parse(notebook_source);
+    #  Actual work starts here
+    #
+    # Read the notebook from file into a string and parse
+    notebook_source = File.read(notebook)
+    json_notebook = JSON.parse(notebook_source)
     notebook_source = '' # free the notebook source to save memory
 
+    #FIX ME what if the notebook is changed and JSON_INPUT is not in the first line of :cell?
+    json_notebook["cells"][notebook_spec[:cell]]["source"][0]["JSON_INPUT"] = readjson
 
-    
-    # Put the input strings as python program into the first cell
-    # parameters end up in x and y
-    # works now, needs to be generalized
+    Rails.logger.info "Replaced input file in notebook with: " + json_notebook["cells"][notebook_spec[:cell]]["source"]
 
-    # cell 0
-    cell_code =<<-ENDCELL
-
-import json
-
-seek_f = open('#{readjson}')
-# now read the file
-seek_f_content = seek_f.read();
-seek_f_json = json.loads(seek_f_content, object_pairs_hook=OrderedDict);
-
-# print for debugging purposes. Also interesting for the user, so leave in.
-#print(seek_f_json)
-ENDCELL
-
-    Rails.logger.info(cell_code);
-
-    # processing: replace cell as specified in config file
-    json_notebook["cells"][notebook_spec[:cell]]["source"]=cell_code;
-
-    # FIXME needs error checking. What happens if file cannot be opened?
+    # FIXME needs error checking. What happens if file cannot be opened? --> Generalize this
     outfile = File.new(outbook,"w")
 
     # this writes the modified book
