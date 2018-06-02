@@ -6,6 +6,7 @@ class DataFilesController < ApplicationController
   include SysMODB::SpreadsheetExtractor
   include MimeTypesHelper
   include ApiHelper
+  include JupyterHelper
 
   include Seek::AssetsCommon
 
@@ -630,19 +631,7 @@ class DataFilesController < ApplicationController
     readjson = Dir::Tmpname.make_tmpname(['./seek-notebook-data-json', '.json'], nil)
 
     # First generate that json input from the params. need path relative to Rails app
-    outjson = py_dir_out + "/" + readjson
-    session.delete :extraction_exception_message
-    begin
-      outjsonfile = File.new(outjson,"w")
-      outjsonfile.write(JSON.generate(json_parameters))
-      outjsonfile.close()
-    rescue Exception => e
-      ExceptionNotifier.notify_exception(e, data: {
-          message: "Jupyter notebooks: Error writing temporary json output:  #{outjsonfile}",
-          current_logged_in_user: current_user
-      })
-      session[:extraction_exception_message] = e.message
-    end
+    write_from_json(py_dir_out + "/" + readjson, json_parameters)
 
     outbook_processed_name = Dir::Tmpname.make_tmpname(['./seek-notebook-processed', '.ipynb'], nil)
     outbook_processed_path = py_dir_out + "/" + outbook_processed_name
@@ -657,21 +646,13 @@ class DataFilesController < ApplicationController
     json_notebook = JSON.parse(notebook_source)
     notebook_source = '' # free the notebook source to save memory
 
-    #FIX ME what if the notebook is changed and JSON_INPUT is not in the first line of :cell?
-    json_notebook["cells"][notebook_spec[:cell]]["source"][0]["JSON_INPUT"] = readjson
-
-    Rails.logger.info "Replaced input file in notebook with: " + json_notebook["cells"][notebook_spec[:cell]]["source"]
-
-    # FIXME needs error checking. What happens if file cannot be opened? --> Generalize this
-    outfile = File.new(outbook,"w")
-
-    # this writes the modified book
-    outfile.write(JSON.generate(json_notebook))
-    outfile.close()
+    # Put the tmp input filename inside the python code and write out the new notebook to execute
+    subs = {:JSON_INPUT => readjson}
+    replace_placeholder_in_notebook_cell(json_notebook, notebook_spec[:cell], subs)
+    write_from_json(outbook, json_notebook)
 
 
     # run scripts:
-    # seems to be the safest way to run ruby commands according to WHOM?
     # first run the notebook!
     puts "*** running the notebook: #{command} #{outbook} --to notebook --execute --output=#{outbook_processed_name}"
     Rails.logger.info "Running:  #{command} #{outbook} --to notebook --execute --output=#{outbook_processed_name}"
@@ -679,15 +660,12 @@ class DataFilesController < ApplicationController
 
     Rails.logger.info result
 
-
-    
     # then turn it into HTML
     # One alternative way to do it would be to run the script.
     # however, I do not know how you would get the plot.
     Rails.logger.info "*** converting notebook to HTML:  #{command} #{outbook_processed_path} --to html"
 
     result = `#{command} #{outbook_processed_path} --to html`
-
     
     Rails.logger.info result
 
