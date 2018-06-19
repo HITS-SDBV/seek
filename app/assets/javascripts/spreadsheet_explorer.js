@@ -721,7 +721,7 @@ function send_to_python(test){
     // write test method into query json
     data['test'] = test;
 
-    // shitty test for selection
+    // tests for selection
     if ( data['test'] != 'Please select') {
 	     $j.post("pythonize",  data)
 	         .done(function(data){
