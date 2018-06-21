@@ -48,12 +48,8 @@ class DataFilesController < ApplicationController
     # FIXME: Clean up!
     test = params['test']
 
-    # FIXME: why use this location?
-    #name_of_outfile = "public/python_nb/outbook.nbconvert.ipynb"
-    #name_of_outfile_html = "public/python_nb/outbook.nbconvert.html"
     # delete intermediate files, in case call_ipython fails.
-    # TODO: maybe this should be done earlier
-    # FIXME: This is really scary programming. There is a file with an undefined lifetime
+
     # FIXME: Just one per session
     #if File.exist?(name_of_outfile)
     #  puts "deleted #{name_of_outfile_html}"
@@ -68,17 +64,6 @@ class DataFilesController < ApplicationController
     name_of_outfile_html = resultHash["htmlBookPath"] 
     # TODO check for success
 
-    # redirect_to html_output
-    # TODO redirect to a variable html filename based on a timestamp or tmp-stamp generation.
-    # FIXME thats not the way you do it.
-    # FIXME read the file and output it
-    #redirect_to "/python_nb/outbook.nbconvert.html"
-    #Rails.logger.debug "Before reading iPython results"
-
-    #Rails.logger.debug "The content"
-    #Rails.logger.debug scontent
-    #Rails.logger.debug "/The content"
-
     unless(session[:jupyterInfo])
       session[:jupyterInfo]={}
     end
@@ -88,16 +73,15 @@ class DataFilesController < ApplicationController
     ipynb_url = create_notebook_url(resultHash['key'],'ipynb')
     small_html_url = create_notebook_url(resultHash['key'],'smallHtml')
 
-
     # render :text => "This is the content of Jupyter Info: #{session[:jupyterInfo]} #{html_url},#{ipynb_url}"
 
     #return(inner_get_book(resultHash['key'],'smallHtml'))
+    # FIXME move to spreadsheets/ paritals?
     render partial: 'jupyter_result', locals:{
              small_html_url: small_html_url,
              html_url:       html_url,
              ipynb_url:      ipynb_url,
            }
-    #, locals: { small_html_url: small_html_url}
   end
 
   def plot

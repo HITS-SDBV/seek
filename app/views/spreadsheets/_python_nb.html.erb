@@ -24,14 +24,5 @@
 
   //$j('#py_png_dl > img').remove();
   }
-  function load_image_and_hrefs(time, ipynb_path) {
-    //add an image
-    $j('#py_png_dl').prepend($j('<img>',{id: 'Ttest_table', class: "downloadable", src:"/python_nb/table.png?"+ time}));
-    //make image downloadable by binding it to an <a href> element, setting href = the image source.
-    $j('#py_png_dl')
-        .attr('href', $j('#Ttest_table').attr('src'))
-    $j('#ipynb_dl')
-        .attr("href", ipynb_path)
-  }
 
 </script>

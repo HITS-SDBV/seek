@@ -704,18 +704,19 @@ function read_data_numbered() {
 
         	data_obj[effective_key]["values"].push(selected_cells[each_index].innerHTML);
     });
+
     return data_obj;
 }
 
 
-// parameter test is a string specifying which test to perform. one of 'ttest', '1wanova'
+// parameter test is a string specifying which test to perform.
 function send_to_python(test){
     data = {"marked" : read_data_numbered()};
     //test=$j("#stats_dropdown option:selected").text();
 
     if (data["marked"].length == 0 ) {
-      	console.error("Data object was empty. Probably no columns were marked.");
-      	alert("Data object was empty. Probably no columns were marked.");
+      	console.error("Data object was empty. Were any columns marked?");
+      	alert("Data object was empty.  Were any columns marked?");
       	return;
     }
     // write test method into query json
@@ -727,8 +728,7 @@ function send_to_python(test){
 	         .done(function(data){
 		           console.log("successfully posted to \"pythonize\".");
 		           var date = new Date();
-		     // var myWindow = window.open("");
-		     //myWindow.document.write(data);
+
 		     $j('#ipython_figure_container').append(data);
 		     $j('#ipython_figure_container').show()
 	    }).fail(function(){
