@@ -596,72 +596,59 @@ class DataFilesController < ApplicationController
     py_dir_out =  Settings.defaults[:python_nb_tmp]
 
     #find the SEEK config of the test to run
-    notebook_spec = Settings.defaults[:python_nb_notebooks].detect {|nb| nb["id"] == test }
-    if notebook_spec.nil?
-      Rails.logger.error "ERROR: test " + test + " not implemented."
-      return
-    end
-
-    notebook = py_dir_in + '/' + notebook_spec[:script]
+    notebook_spec = get_notebook_spec_for_test(test)
 
     Rails.logger.info "nbconvert_path: " + command + "\npy_dir: " + py_dir_in
     Rails.logger.info "Notebook Specification from config file: #{notebook_spec}"
 
-    # https://stackoverflow.com/questions/13787746/creating-a-thread-safe-temporary-file-name
-    outkey = Dir::Tmpname.make_tmpname(['seek-notebook-key',".ign"],nil)
-    outbook = py_dir_out + "/" + Dir::Tmpname.make_tmpname(['seek-notebook-base', '.ipynb'], nil)
+    # generate temporary files
+    gen_files = ["seek-notebook-key.ign", "seek-notebook-base.ipynb", "seek-notebook-data-json.json", "seek-notebook-processed.ipynb", "seek-notebook-small.ipynb"]
+    fnames, paths  = create_temp_files(gen_files, py_dir_out)    #KEYS to dicts: key, base, json,  processed, small
 
-    # path to json input as needed by the ipython notebook (need path relative to notebook)
-    readjson = Dir::Tmpname.make_tmpname(['seek-notebook-data-json', '.json'], nil)
+    # generate a json input from the params. need path relative to Rails app
+    write_from_json(paths['json'], json_parameters)
 
-    # First generate that json input from the params. need path relative to Rails app
-    write_from_json(py_dir_out + "/" + readjson, json_parameters)
+    # prepare the ipynb with the needed spreadsheet (json) input
+### CONTINUE FROM HERE 
 
-    outbook_processed_name = Dir::Tmpname.make_tmpname(['seek-notebook-processed', '.ipynb'], nil)
-    outbook_processed_path = py_dir_out + "/" + outbook_processed_name
-
-    outbook_small_name = Dir::Tmpname.make_tmpname(['seek-notebook-small', '.ipynb'], nil)
-    outbook_small_path = py_dir_out + "/" + outbook_small_name
-
-    #  Actual work starts here
-    #
-    # Read the notebook from file into a string and parse
-    notebook_source = File.read(notebook)
+    # Read the ipynb notebook from file into a string and parse
+    notebook_source = File.read(py_dir_in + '/' + notebook_spec[:script])
     json_notebook = JSON.parse(notebook_source)
     notebook_source = '' # free the notebook source to save memory
 
     # Put the tmp input filename inside the python code and write out the new notebook to execute
-    subs = {:JSON_INPUT => readjson}
+    subs = {:JSON_INPUT => fnames['json']}
     replace_placeholder_in_notebook_cell(json_notebook, notebook_spec[:cell], subs)
-    write_from_json(outbook, json_notebook)
+    write_from_json(paths['base'], json_notebook)
 
 
     # run scripts:
     # first run the notebook!
-    puts "*** running the notebook: #{command} #{outbook} --to notebook --execute --output=#{outbook_processed_name}"
-    Rails.logger.info "Running:  #{command} #{outbook} --to notebook --execute --output=#{outbook_processed_name}"
-    result = `#{command} #{outbook} --to notebook --execute --allow-errors --output=#{outbook_processed_name}`
+    puts "*** running the notebook: #{command} #{paths['base']} --to notebook --execute --output=#{fnames['processed']}"
+    Rails.logger.info "Running:  #{command} #{paths['base']} --to notebook --execute --output=#{fnames['processed']}"
+    result = `#{command} #{paths['base']} --to notebook --execute --allow-errors --output=#{fnames['processed']}`
+    result = `#{command} #{paths['base']} --to notebook --execute --allow-errors --output=#{fnames['processed']}`
 
     Rails.logger.info result
 
     # then turn it into HTML
     # One alternative way to do it would be to run the script.
     # however, I do not know how you would get the plot.
-    Rails.logger.info "*** converting notebook to HTML:  #{command} #{outbook_processed_path} --to html"
+    Rails.logger.info "*** converting notebook to HTML:  #{command} #{paths['processed']} --to html"
 
-    result = `#{command} #{outbook_processed_path} --to html`
+    result = `#{command} #{paths['processed']} --to html`
     
     Rails.logger.info result
 
     # Maybe some fishing inside the notebook in order to isolate the result of the last cell
 
-    select_cell_from_notebook(notebook_spec[:display_cell],outbook_processed_path,outbook_small_path,notebook_spec[:hide_source]);
-    result = `#{command} #{outbook_small_path} --to html`
+    select_cell_from_notebook(notebook_spec[:display_cell],paths['processed'],paths['small'],notebook_spec[:hide_source]);
+    result = `#{command} #{paths['small']} --to html`
     
     #redirect here eventually
-    ipynbBookPath = outbook_processed_path;
-    htmlBookPath = outbook_processed_path.sub(/.ipynb/, '.html')
-    htmlSmallPath = outbook_small_path.sub(/.ipynb/, '.html')
+    ipynbBookPath = paths['processed'];
+    htmlBookPath = paths['processed'].sub(/.ipynb/, '.html')
+    htmlSmallPath = paths['small'].sub(/.ipynb/, '.html')
     Rails.logger.info "Processed: "
     Rails.logger.info htmlBookPath;
     Rails.logger.info htmlSmallPath;
@@ -669,7 +656,7 @@ class DataFilesController < ApplicationController
 		"ipynb" => ipynbBookPath,
 		"html" =>	 htmlBookPath,
 		"smallHtml" =>	 htmlSmallPath,
-                "key" => outkey
+                "key" => fnames['key']
     };
 end
 
