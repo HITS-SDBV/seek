@@ -122,7 +122,7 @@ def load_seek_config_defaults!
           :id => "2wanova",
           :display_name => '2-Way ANOVA',
           :cell => 2,
-          :display_cell => [6,8,12],
+          :display_cell => [0,5,6,7,8,12,13,14,15,16],
           :script => '2wanova.ipynb',
           :hide_source => 1
         }
