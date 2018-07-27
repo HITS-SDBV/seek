@@ -609,18 +609,18 @@ class DataFilesController < ApplicationController
 
     # https://stackoverflow.com/questions/13787746/creating-a-thread-safe-temporary-file-name
     outkey = Dir::Tmpname.make_tmpname(['seek-notebook-key',".ign"],nil)
-    outbook = Dir::Tmpname.make_tmpname([py_dir_out + '/seek-notebook-base', '.ipynb'], nil)
+    outbook = py_dir_out + "/" + Dir::Tmpname.make_tmpname(['seek-notebook-base', '.ipynb'], nil)
 
     # path to json input as needed by the ipython notebook (need path relative to notebook)
-    readjson = Dir::Tmpname.make_tmpname(['./seek-notebook-data-json', '.json'], nil)
+    readjson = Dir::Tmpname.make_tmpname(['seek-notebook-data-json', '.json'], nil)
 
     # First generate that json input from the params. need path relative to Rails app
     write_from_json(py_dir_out + "/" + readjson, json_parameters)
 
-    outbook_processed_name = Dir::Tmpname.make_tmpname(['./seek-notebook-processed', '.ipynb'], nil)
+    outbook_processed_name = Dir::Tmpname.make_tmpname(['seek-notebook-processed', '.ipynb'], nil)
     outbook_processed_path = py_dir_out + "/" + outbook_processed_name
 
-    outbook_small_name = Dir::Tmpname.make_tmpname(['./seek-notebook-small', '.ipynb'], nil)
+    outbook_small_name = Dir::Tmpname.make_tmpname(['seek-notebook-small', '.ipynb'], nil)
     outbook_small_path = py_dir_out + "/" + outbook_small_name
 
     #  Actual work starts here
@@ -736,14 +736,13 @@ def select_cell_from_notebook(cell_list, in_book_file_path, out_book_file_path,w
 
   notebook_source = File.read(in_book_file_path);
   json_notebook = JSON.parse(notebook_source);
-
   o = []
 
   cell_list.each do |i|
     Rails.logger.error i
     Rails.logger.error json_notebook["cells"][i]['source']
 
-    if(without_source>0)
+    if(without_source>0 and json_notebook["cells"][i]["cell_type"] != "markdown")
       json_notebook["cells"][i]['source']=[]
       #json_notebook["cells"][i].delete :source
     end
