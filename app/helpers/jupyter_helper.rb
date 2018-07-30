@@ -34,15 +34,15 @@ module JupyterHelper
   end
 
   # write a json object into a json file
-  def write_from_json(json_to_write, json_obj)
+  def write_from_json(file_to_write, json_obj)
     session.delete :extraction_exception_message
     begin
-      outfile = File.new(json_to_write,"w")
+      outfile = File.new(file_to_write,"w")
       outfile.write(JSON.generate(json_obj))
       outfile.close()
     rescue Exception => e
       ExceptionNotifier.notify_exception(e, data: {
-          message: "Error Jupyter notebooks: Error writing file from a JSON object:  #{json_to_write}",
+          message: "Error Jupyter notebooks: Error writing file from a JSON object:  #{file_to_write}",
           current_logged_in_user: current_user
       })
       session[:extraction_exception_message] = e.message

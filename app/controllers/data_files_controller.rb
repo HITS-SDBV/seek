@@ -36,33 +36,14 @@ class DataFilesController < ApplicationController
   include Seek::IsaGraphExtensions
 
   def get_book
-    Rails.logger.error "get_book"
-    
-    key = params['bookKey'];
-    f = params['bookFormat'];
-
-    return inner_get_book(key,f);
+    return inner_get_book(params['bookKey'],params['bookFormat'])
   end
   
   def pythonize
-    # FIXME: Clean up!
     test = params['test']
-
-    # delete intermediate files, in case call_ipython fails.
-
-    # FIXME: Just one per session
-    #if File.exist?(name_of_outfile)
-    #  puts "deleted #{name_of_outfile_html}"
-    #  File.delete(name_of_outfile_html)
-    #end
-    #if File.exist?(name_of_outfile)
-    #  puts "deleted #{name_of_outfile}"
-    #  File.delete(name_of_outfile)
-    #end
     resultHash = call_ipython(test,params)
     
-    name_of_outfile_html = resultHash["htmlBookPath"] 
-    # TODO check for success
+    # TO DO check for success +  delete intermediate files, in case call_ipython fails.
 
     unless(session[:jupyterInfo])
       session[:jupyterInfo]={}
@@ -82,6 +63,7 @@ class DataFilesController < ApplicationController
              html_url:       html_url,
              ipynb_url:      ipynb_url,
            }
+
   end
 
   def plot
@@ -600,7 +582,7 @@ class DataFilesController < ApplicationController
     gen_files = ["seek-notebook-key.ign", "seek-notebook-base.ipynb", "seek-notebook-data-json.json", "seek-notebook-processed.ipynb", "seek-notebook-small.ipynb"]
     fnames, paths  = create_temp_files(gen_files, Settings.defaults[:python_nb_tmp])    #KEYS to dicts: key, base, json,  processed, small
 
-    # 2. generate a json input from the params. need path relative to Rails app
+    # 2. generate a json input file from the params. need path relative to Rails app
     write_from_json(paths['json'], json_parameters)
 
     # 3. Read the ipynb notebook from file into a string and parse to a JSON
@@ -608,7 +590,7 @@ class DataFilesController < ApplicationController
     json_notebook = JSON.parse(notebook_source)
     notebook_source = '' # free the notebook source to save memory
 
-    # 4. Put the tmp json spreadsheet input filename inside the python code and write out the new notebook to execute
+    # 4. Put the tmp json spreadsheet input filename (from step 2) inside the python code and write out the new notebook to execute
     subs = {:JSON_INPUT => fnames['json']}
     replace_placeholder_in_notebook_cell(json_notebook, notebook_spec[:cell], subs)
     write_from_json(paths['base'], json_notebook)
@@ -684,7 +666,7 @@ def forbid_new_version_if_samples
 end
 
 def create_notebook_url(bookKey,bookFormat)
-  return "#{root_url}data_files/2/get_book?bookKey=#{bookKey};bookFormat=#{bookFormat}"
+  return "#{root_url}#{controller_name.downcase}/#{params["id"]}/get_book?bookKey=#{bookKey};bookFormat=#{bookFormat}"
 end
 
 def inner_get_book(key,f)
@@ -704,7 +686,7 @@ def inner_get_book(key,f)
     
   if(f .eql? 'ipynb')
     file_path = session[:jupyterInfo][key]['ipynb']
-    ct = 'application/json'
+    ct =  'application/json'  #ipynb??
   end
   
   Rails.logger.error f
