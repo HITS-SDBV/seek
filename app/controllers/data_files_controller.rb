@@ -588,75 +588,47 @@ class DataFilesController < ApplicationController
   protected
 
   def call_ipython(test, json_parameters)
-    # location of the nbconvert command to be run
-    command = Settings.defaults[:nbconvert_path]
-
-    # server base script location + output dir
-    py_dir_in =  Settings.defaults[:python_nb_basedir]
-    py_dir_out =  Settings.defaults[:python_nb_tmp]
-
     #find the SEEK config of the test to run
     notebook_spec = get_notebook_spec_for_test(test)
 
-    Rails.logger.info "nbconvert_path: " + command + "\npy_dir: " + py_dir_in
+    Rails.logger.info "nbconvert_path: " + Settings.defaults[:nbconvert_path] +
+                          "\npy_dir (template ipynb location): " + Settings.defaults[:python_nb_basedir]
     Rails.logger.info "Notebook Specification from config file: #{notebook_spec}"
 
-    # generate temporary files
+    ### File / input Prep
+    # 1. generate temporary files
     gen_files = ["seek-notebook-key.ign", "seek-notebook-base.ipynb", "seek-notebook-data-json.json", "seek-notebook-processed.ipynb", "seek-notebook-small.ipynb"]
-    fnames, paths  = create_temp_files(gen_files, py_dir_out)    #KEYS to dicts: key, base, json,  processed, small
+    fnames, paths  = create_temp_files(gen_files, Settings.defaults[:python_nb_tmp])    #KEYS to dicts: key, base, json,  processed, small
 
-    # generate a json input from the params. need path relative to Rails app
+    # 2. generate a json input from the params. need path relative to Rails app
     write_from_json(paths['json'], json_parameters)
 
-    # prepare the ipynb with the needed spreadsheet (json) input
-### CONTINUE FROM HERE 
-
-    # Read the ipynb notebook from file into a string and parse
-    notebook_source = File.read(py_dir_in + '/' + notebook_spec[:script])
+    # 3. Read the ipynb notebook from file into a string and parse to a JSON
+    notebook_source = File.read(Settings.defaults[:python_nb_basedir] + '/' + notebook_spec[:script])
     json_notebook = JSON.parse(notebook_source)
     notebook_source = '' # free the notebook source to save memory
 
-    # Put the tmp input filename inside the python code and write out the new notebook to execute
+    # 4. Put the tmp json spreadsheet input filename inside the python code and write out the new notebook to execute
     subs = {:JSON_INPUT => fnames['json']}
     replace_placeholder_in_notebook_cell(json_notebook, notebook_spec[:cell], subs)
     write_from_json(paths['base'], json_notebook)
 
+    ### run nbconvert commands using run_nbconvert_command(input, params, output) from jupyter_helper
+    # 1. execute the notebook
+    run_nbconvert_command(paths['base'], "--to notebook --execute --allow-errors", fnames['processed'])
 
-    # run scripts:
-    # first run the notebook!
-    puts "*** running the notebook: #{command} #{paths['base']} --to notebook --execute --output=#{fnames['processed']}"
-    Rails.logger.info "Running:  #{command} #{paths['base']} --to notebook --execute --output=#{fnames['processed']}"
-    result = `#{command} #{paths['base']} --to notebook --execute --allow-errors --output=#{fnames['processed']}`
-    result = `#{command} #{paths['base']} --to notebook --execute --allow-errors --output=#{fnames['processed']}`
+    # 2. convert the processed notebook into HTML
+    run_nbconvert_command(paths['processed'], "--to html")
 
-    Rails.logger.info result
+    # 3. get output cells (specified in SEEK config as notebook specs)
+    select_cell_from_notebook(notebook_spec[:display_cell], paths['processed'], paths['small'], notebook_spec[:hide_source])
+    run_nbconvert_command(paths['small'], "--to html")
 
-    # then turn it into HTML
-    # One alternative way to do it would be to run the script.
-    # however, I do not know how you would get the plot.
-    Rails.logger.info "*** converting notebook to HTML:  #{command} #{paths['processed']} --to html"
-
-    result = `#{command} #{paths['processed']} --to html`
-    
-    Rails.logger.info result
-
-    # Maybe some fishing inside the notebook in order to isolate the result of the last cell
-
-    select_cell_from_notebook(notebook_spec[:display_cell],paths['processed'],paths['small'],notebook_spec[:hide_source]);
-    result = `#{command} #{paths['small']} --to html`
-    
-    #redirect here eventually
-    ipynbBookPath = paths['processed'];
-    htmlBookPath = paths['processed'].sub(/.ipynb/, '.html')
-    htmlSmallPath = paths['small'].sub(/.ipynb/, '.html')
-    Rails.logger.info "Processed: "
-    Rails.logger.info htmlBookPath;
-    Rails.logger.info htmlSmallPath;
     return {
-		"ipynb" => ipynbBookPath,
-		"html" =>	 htmlBookPath,
-		"smallHtml" =>	 htmlSmallPath,
-                "key" => fnames['key']
+		  "ipynb" => paths['processed'],
+		  "html" =>	 paths['processed'].sub(/.ipynb/, '.html'),
+		  "smallHtml" =>	  paths['small'].sub(/.ipynb/, '.html'),
+      "key" => fnames['key']
     };
 end
 
@@ -713,42 +685,6 @@ end
 
 def create_notebook_url(bookKey,bookFormat)
   return "#{root_url}data_files/2/get_book?bookKey=#{bookKey};bookFormat=#{bookFormat}"
-end
-
-def select_cell_from_notebook(cell_list, in_book_file_path, out_book_file_path,without_source)
-  Rails.logger.error "Selecting single cell from notebook: "
-  Rails.logger.error cell_list
-  Rails.logger.error in_book_file_path
-  Rails.logger.error out_book_file_path
-
-  notebook_source = File.read(in_book_file_path);
-  json_notebook = JSON.parse(notebook_source);
-  o = []
-
-  cell_list.each do |i|
-    Rails.logger.error i
-    Rails.logger.error json_notebook["cells"][i]['source']
-
-    if(without_source>0 and json_notebook["cells"][i]["cell_type"] != "markdown")
-      json_notebook["cells"][i]['source']=[]
-      #json_notebook["cells"][i].delete :source
-    end
-
-    o = o.push json_notebook["cells"][i]
-  end
-
-  json_notebook["cells"]=o
-
-  Rails.logger.error "Result: "
-  Rails.logger.error json_notebook["cells"]
-  Rails.logger.error "EndResult: "
-  
-  # FIXME needs error checking. What happens if file cannot be opened?
-  outfile = File.new(out_book_file_path,"w")
-  
-  # this writes the modified book
-  outfile.write(JSON.generate(json_notebook))
-  outfile.close()
 end
 
 def inner_get_book(key,f)

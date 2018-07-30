@@ -42,7 +42,7 @@ module JupyterHelper
       outfile.close()
     rescue Exception => e
       ExceptionNotifier.notify_exception(e, data: {
-          message: "Jupyter notebooks: Error writing file from a JSON object:  #{json_to_write}",
+          message: "Error Jupyter notebooks: Error writing file from a JSON object:  #{json_to_write}",
           current_logged_in_user: current_user
       })
       session[:extraction_exception_message] = e.message
@@ -57,6 +57,45 @@ module JupyterHelper
       Rails.logger.info "Cell after Replace: " + json_notebook["cells"][cell]["source"][i].to_s
     end
     return json_notebook
+  end
+
+  def run_nbconvert_command(input, params, output=nil)
+    # location of the nbconvert command to be run
+    nbconvert = Settings.defaults[:nbconvert_path]
+
+    to_run = "#{nbconvert} #{input} #{params}"
+    unless output.nil?
+      to_run += " --output=#{output}"
+    end
+
+    Rails.logger.info "Running nbconvert command: #{to_run}"
+    result = `#{to_run}`
+    Rails.logger.info result
+  end
+
+  def select_cell_from_notebook(cell_list, in_book_file_path, out_book_file_path, without_source)
+    Rails.logger.info "Selecting cells from notebook: " + cell_list.to_s
+
+    notebook_source = File.read(in_book_file_path)
+    json_notebook = JSON.parse(notebook_source)
+    o = []
+
+    cell_list.each do |i|
+      #Rails.logger.info i
+      #Rails.logger.info json_notebook["cells"][i]['source']
+      if(without_source>0 and json_notebook["cells"][i]["cell_type"] != "markdown")
+        json_notebook["cells"][i]['source']=[]
+        json_notebook["cells"][i].delete :source
+      end
+      o = o.push json_notebook["cells"][i]
+    end
+
+    json_notebook["cells"]=o
+
+    # write the modified book
+    outfile = File.new(out_book_file_path,"w")
+    outfile.write(JSON.generate(json_notebook))
+    outfile.close()
   end
 
 end
