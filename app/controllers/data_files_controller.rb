@@ -35,10 +35,12 @@ class DataFilesController < ApplicationController
 
   include Seek::IsaGraphExtensions
 
+  # controller call to fetch a jupyter notebook in html/ipynb format
   def get_book
     return inner_get_book(params['bookKey'],params['bookFormat'])
   end
-  
+
+  # Run a jupyter notebook from marked spreadsheet data
   def pythonize
     test = params['test']
     resultHash = call_ipython(test,params)
@@ -56,7 +58,6 @@ class DataFilesController < ApplicationController
 
     # render :text => "This is the content of Jupyter Info: #{session[:jupyterInfo]} #{html_url},#{ipynb_url}"
 
-    #return(inner_get_book(resultHash['key'],'smallHtml'))
     # FIXME move to spreadsheets/ paritals?
     render partial: 'jupyter_result', locals:{
              small_html_url: small_html_url,
@@ -670,8 +671,6 @@ def create_notebook_url(bookKey,bookFormat)
 end
 
 def inner_get_book(key,f)
-  Rails.logger.error "get_book"
-  
   file_path=""
   ct = 'NONE'
   if(f .eql? 'html')
@@ -686,21 +685,16 @@ def inner_get_book(key,f)
     
   if(f .eql? 'ipynb')
     file_path = session[:jupyterInfo][key]['ipynb']
-    ct =  'application/json'  #ipynb??
+    ct =  'application/ipynb'  #ipynb??
+    response.headers['Content-Disposition'] = 'attachment; filename="' + "TEMPfilename" + '.ipynb"'
   end
-  
-  Rails.logger.error f
-  Rails.logger.error file_path
-  Rails.logger.error ct
-  
-  Rails.logger.error "File Path #{file_path}"
-  
-  Rails.logger.error create_notebook_url(key,f);
-  
+
+  Rails.logger.info "Content: #{ct}\nFile Path #{file_path}\nURL: #{create_notebook_url(key,f)}"
+
   if File.exist?(file_path)
     # from https://stackoverflow.com/questions/130948/read-binary-file-as-string-in-ruby
     contents = File.open(file_path, 'rb') { |fi| fi.read }
-    render :body => contents , :content_type => ct
+    render :body => contents , :content_type => ct #:attachment => "filename.ipynb", :disposition => "attachment"
   else
     render :text => "Processing the notebook failed."
   end
