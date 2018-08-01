@@ -36,8 +36,21 @@ class DataFilesController < ApplicationController
   include Seek::IsaGraphExtensions
 
   # controller call to fetch a jupyter notebook in html/ipynb format
+  # TO DO generalize for when the notebooks have a different format?  --> currently other languages (R, Haskell.. ) still use the ipynb extension
   def get_book
-    return inner_get_book(params['bookKey'],params['bookFormat'])
+    file_path = session[:jupyterInfo][params['bookKey']][params['bookFormat']]
+    type_dict = {'html' => 'text/html', 'smallHtml' => 'text/html', 'ipynb' => 'application/ipynb'}
+    type = type_dict[params['bookFormat']]
+
+    if File.exist?(file_path)
+      if (params['bookFormat'] .eql? 'ipynb')
+        send_file file_path, :filename => file_path.split('/')[-1], :type => type, :disposition => 'attachment', :status => :ok
+      else
+        send_file file_path, :type => type, :disposition => 'inline', :status => :ok
+      end
+    else
+      render :text => "Processing the Jupyter notebook failed."
+    end
   end
 
   # Run a jupyter notebook from marked spreadsheet data
@@ -663,40 +676,6 @@ def forbid_new_version_if_samples
     respond_to do |format|
       format.html { redirect_to @data_file }
     end
-  end
-end
-
-def create_notebook_url(bookKey,bookFormat)
-  return "#{root_url}#{controller_name.downcase}/#{params["id"]}/get_book?bookKey=#{bookKey};bookFormat=#{bookFormat}"
-end
-
-def inner_get_book(key,f)
-  file_path=""
-  ct = 'NONE'
-  if(f .eql? 'html')
-    file_path = session[:jupyterInfo][key]['html']
-    ct = 'text/html'
-  end
-  
-  if(f .eql? 'smallHtml')
-    file_path = session[:jupyterInfo][key]['smallHtml']
-    ct = 'text/html'
-  end
-    
-  if(f .eql? 'ipynb')
-    file_path = session[:jupyterInfo][key]['ipynb']
-    ct =  'application/ipynb'  #ipynb??
-    response.headers['Content-Disposition'] = 'attachment; filename="' + "TEMPfilename" + '.ipynb"'
-  end
-
-  Rails.logger.info "Content: #{ct}\nFile Path #{file_path}\nURL: #{create_notebook_url(key,f)}"
-
-  if File.exist?(file_path)
-    # from https://stackoverflow.com/questions/130948/read-binary-file-as-string-in-ruby
-    contents = File.open(file_path, 'rb') { |fi| fi.read }
-    render :body => contents , :content_type => ct #:attachment => "filename.ipynb", :disposition => "attachment"
-  else
-    render :text => "Processing the notebook failed."
   end
 end
 

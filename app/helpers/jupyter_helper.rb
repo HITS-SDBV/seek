@@ -49,6 +49,7 @@ module JupyterHelper
     end
   end
 
+  # given a substitution dictionary, replace the "key"s in the specified notebook cell with "value"s.
   def replace_placeholder_in_notebook_cell(json_notebook, cell, substitutions)
     json_notebook["cells"][cell]["source"].each_with_index do |line, i|
       substitutions.each do |key, value|
@@ -73,6 +74,9 @@ module JupyterHelper
     Rails.logger.info result
   end
 
+  # select only the given cell list (integers) from the input notebook file, write into a new output notebook file. (small HTML)
+  # without_source=True: will only write out the output of each cell (usually figures).
+  # Markdown cells are always written out because it is assumed they are used for documentation and clarification of the figures which follow.
   def select_cell_from_notebook(cell_list, in_book_file_path, out_book_file_path, without_source)
     Rails.logger.info "Selecting cells from notebook: " + cell_list.to_s
 
@@ -96,6 +100,10 @@ module JupyterHelper
     outfile = File.new(out_book_file_path,"w")
     outfile.write(JSON.generate(json_notebook))
     outfile.close()
+  end
+
+  def create_notebook_url(key,file_format)
+    return "#{root_url}#{controller_name.downcase}/#{params["id"]}/get_book?bookKey=#{key};bookFormat=#{file_format}"
   end
 
 end
