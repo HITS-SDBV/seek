@@ -506,6 +506,11 @@ class DataFilesController < ApplicationController
   def provide_metadata
     @data_file ||= session[:processed_datafile]
     @assay ||= session[:processed_assay]
+
+    #this perculiar line avoids a no method error when calling super later on, when there are no assays in the database
+    # this I believe is caused by accessing the unmarshalled @assay before the Assay class has been encountered. Adding this line
+    # avoids the error
+    Assay.new
     @warnings ||= session[:processing_warnings] || []
     @exception_message ||= session[:extraction_exception_message]
     @create_new_assay = !(@assay.title.blank? && @assay.description.blank?)
@@ -552,6 +557,9 @@ class DataFilesController < ApplicationController
       update_relationships(@data_file, params)
 
       session.delete(:uploaded_content_blob_id)
+      session.delete(:processed_datafile)
+      session.delete(:processed_assay)
+      session.delete(:processed_warnings)
 
       respond_to do |format|
         flash[:notice] = "#{t('data_file')} was successfully uploaded and saved." if flash.now[:notice].nil?

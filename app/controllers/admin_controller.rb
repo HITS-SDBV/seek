@@ -172,6 +172,10 @@ class AdminController < ApplicationController
     Seek::Config.terms_enabled = string_to_boolean params[:terms_enabled]
     Seek::Config.terms_page = params[:terms_page]
 
+
+    Seek::Config.privacy_enabled = string_to_boolean params[:privacy_enabled]
+    Seek::Config.privacy_page = params[:privacy_page]
+
     update_redirect_to true, 'rebrand'
   end
 
@@ -439,6 +443,14 @@ class AdminController < ApplicationController
     end
   end
 
+  # this destroys any failed Delayed::Jobs
+  def clear_failed_jobs
+    Delayed::Job.where('failed_at IS NOT NULL').destroy_all
+    respond_to do |format|
+      format.json{ render text:'',status: :ok}
+    end
+  end
+
   private
 
   def created_at_data_for_model(model)
@@ -527,4 +539,5 @@ class AdminController < ApplicationController
     end
     redirect_to action: :show
   end
+
 end
