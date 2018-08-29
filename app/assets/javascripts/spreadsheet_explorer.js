@@ -927,3 +927,81 @@ function displayRowsPerPage(){
         $('rows_per_page').show();
     }
 }
+
+/* Fetch XML --> convert to JSON --> add "selected" attribute to selected cells.
+  - currently wb=0, because we only have one workbook each time. later when we combine different files, this should be changed.
+  - for merging different files - can take a list of many objects:
+      var super_json = merge_json_workbooks([json_obj, json_obj2]);
+*/
+function get_data(rb, cb) {
+    if (rb == null) rb = -1;
+    if (cb == null) cb = -1;
+    console.log("get data rb, cb: ", rb, cb)
+
+    var json_copy = JSON.parse(JSON.stringify(full_json_obj));
+    json_obj = add_selected_to_json(json_copy, wb=0, row_labels=rb, col_labels=cb);
+    var selected_json = iterate_on_rows(json_obj, get_selected_from_row);
+    console.log("selected json: ", selected_json);
+    return selected_json;
+}
+
+function heatmap_plot(){
+    var options = {cr: 0, hm_data: [], columns: {}, row_labels: 0, col_labels: 0};
+    var selected_json = get_data(rb=options.row_labels, cb=options.col_labels);
+    iterate_on_rows(selected_json, init_heatmap_row, add_col_titles_from_sheet, options);
+    //var heatmap_data = init_heatmap_data(selected_json); //plotting_selected_cells();
+    //draw_heatmap(heatmap_data);
+    draw_heatmap(options.hm_data);
+    $j('#heatmap_container').show();
+    doUpdate();
+}
+
+/*
+  Read column labels from the row number specified in opt.col_labels
+  Modify opt.columns ( = {col_alpha1: "title1", col_alpha2: "title2" ... }
+  Note: opt.columns remains valid per sheet s, because it tracks according to column_alpha as a dictionary key.
+ */
+
+function add_col_titles_from_sheet(obj, w, s, opt) {
+    var sheet_obj = obj["workbook"][w]["sheet"][s];
+    opt.columns = {};
+    var cb = opt.col_labels;
+    //if (sheet_obj.rows.row[cb].cell.length > 0) {
+    for (var c = 0; c < sheet_obj.rows.row[cb].cell.length; c++) {
+        //actual excel sheet column index to avoid shifting of columns (B-->A) on partial selection of columns
+        var col_i = sheet_obj.rows.row[cb].cell[c]["@column_alpha"];
+        opt.columns[col_i] = sheet_obj.rows.row[cb].cell[c]["#text"];
+    }
+    //}
+    console.log(opt.columns);
+    return obj;
+}
+
+/* set up heat map data such that heatmap_data[row_i] = { col_label: .., row_label: .., row: .., col: .., value: ..}
+ Note: the way d3_heatmap was programmed, it's easier to set up the cumulative rows from here. because  data.row will be accessed
+*/
+function init_heatmap_row(obj, w, s, r, opt) {
+    sheet_obj = obj["workbook"][w]["sheet"][s];
+    if (r != opt.col_labels) {
+        if ((a=sheet_obj.rows.row[r].cell !== undefined) && (a=sheet_obj.rows.row[r].cell !== null)
+            && (a=sheet_obj.rows.row[r].cell.length > 0)) {
+            //opt.pc_data[opt.cr] = {}; //object initialization
+            for (var c = 0; c < sheet_obj.rows.row[r].cell.length; c++) {
+                var col_i = sheet_obj.rows.row[r].cell[c]["@column_alpha"];
+                (opt.hm_data).push({
+                    row_label: sheet_obj.rows.row[r].cell[opt.row_labels]["#text"],
+                    col_label: (opt.columns[col_i] || ""),
+                    sheet: sheet_obj["@name"],
+                    row: opt.cr, //sheet_arr[s].rows.row[r]["@index"],
+                    col: sheet_obj.rows.row[r].cell[c]["@column"],
+                    col_alpha: sheet_obj.rows.row[r].cell[c]["@column_alpha"],
+                    value: sheet_obj.rows.row[r].cell[c]["#text"]
+                });
+            }
+            //if at least one cell in the row was not empty, advance cumulative row counter
+            if (Object.keys(opt.hm_data[opt.cr]).length != 0)
+                opt.cr++;
+        }
+    }
+    return obj;
+}
