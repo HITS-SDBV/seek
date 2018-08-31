@@ -1,4 +1,6 @@
 //= require spreadsheet_json
+//= require filesaverjs
+//= require blob-polyfill
 function annotation_source(id, type, name, url) {
     this.id = id;
     this.type = type;
