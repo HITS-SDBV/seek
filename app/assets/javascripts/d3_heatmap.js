@@ -247,11 +247,8 @@ function draw_slider(){
             value = x.invert(d3.mouse(this)[0]);
             brush.extent([value, value]);
         }
-        console.log(" brush value: "+ value);
         filter_heatmap_data(value);
         handle.attr("cx", x(value));
-        //d3.select("#slider").style("background-color", d3.hsl(value, .8, .8));
-        //colorHigh = d3.hsl(value, .8, .8);
     }
 }
 function filter_heatmap_data(threshold){
@@ -259,7 +256,6 @@ function filter_heatmap_data(threshold){
     var filtered_data = new Array();
     for(var i in heatmap_data){
         var value = parseFloat(heatmap_data[i]["value"]);
-        //console.log("value: "+ value + ", threshold: "+ threshold)
         if(value != NaN && value <= parseFloat(threshold)){
             filtered_data.push(heatmap_data[i]);
         }

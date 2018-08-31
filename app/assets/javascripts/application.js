@@ -1,13 +1,13 @@
 // ...
 //= require jquery
 //= require jquery_no_conflict
+//= require jquery-ui
 //= require prototype
 //= require prototype_ujs
 //= require prototype_patch
 //= require effects
 //= require scriptaculous
 //= require controls
-//= require jquery.ui.all
 //= require bootstrap
 //= require vue/vue
 //= require collapsible_panels
