@@ -1,6 +1,7 @@
 //= require spreadsheet_json
 //= require filesaverjs
 //= require blob-polyfill
+
 function annotation_source(id, type, name, url) {
     this.id = id;
     this.type = type;
@@ -943,7 +944,6 @@ function get_data(rb, cb) {
     var json_copy = JSON.parse(JSON.stringify(full_json_obj));
     json_obj = add_selected_to_json(json_copy, wb=0, row_labels=rb, col_labels=cb);
     var selected_json = iterate_on_rows(json_obj, get_selected_from_row);
-    console.log("selected json: ", selected_json);
     return selected_json;
 }
 
@@ -956,6 +956,17 @@ function heatmap_plot(){
     draw_heatmap(options.hm_data);
     $j('#heatmap_container').show();
     doUpdate();
+}
+
+function parallel_coord_plot(){
+    // cr = cumulative rows across workbooks/sheets
+    // not using row labels. compounds are not necessarily a part of the plot.
+    var options = {cr: 0, pc_data: [], columns: {}, col_labels: 0, row_labels: -1};
+    var selected_json = get_data(rb=options.row_labels, cb=options.col_labels);
+    iterate_on_rows(selected_json, init_pc_row, add_col_titles_from_sheet, options);
+    draw_parallel_coord(options.pc_data);
+    $j('#parcoords_container').show();
+    //doUpdate();
 }
 
 /*
@@ -1002,6 +1013,32 @@ function init_heatmap_row(obj, w, s, r, opt) {
             }
             //if at least one cell in the row was not empty, advance cumulative row counter
             if (Object.keys(opt.hm_data[opt.cr]).length != 0)
+                opt.cr++;
+        }
+    }
+    return obj;
+}
+
+/* Set up parallel coordinates data, Array of Objects of length 0...#cr, such that
+ parcoord_data[row_i][col_name] =  (parcoords_data[row_i] = {c1: v1, c2: v2 ...} )
+ TO DO handle zero selections
+ */
+
+function init_pc_row(obj, w, s, r, opt) {
+    //console.log("init pc row s, r: ", s, r);
+    sheet_obj = obj["workbook"][w]["sheet"][s];
+    if (r != opt.col_labels) {
+        if ((a=sheet_obj.rows.row[r].cell !== undefined) && (a=sheet_obj.rows.row[r].cell !== null)
+            &&(a=sheet_obj.rows.row[r].cell.length > 0)) {
+            opt.pc_data[opt.cr] = {}; //object initialization
+            for (var c = 0; c < sheet_obj.rows.row[r].cell.length; c++) {
+                var col_i = sheet_obj.rows.row[r].cell[c]["@column_alpha"];
+                opt.pc_data[opt.cr][opt.columns[col_i]] = sheet_obj.rows.row[r].cell[c]["#text"];
+                 //console.log("c: ", c, "cr: ", opt.cr, "col_i", col_i, "col: ", opt.columns[col_i])
+                 //console.log(opt.pc_data[opt.cr][opt.columns[col_i]])
+            }
+            //if at least one cell in the row was not empty, advance cumulative row counter
+            if (Object.keys(opt.pc_data[opt.cr]).length != 0)
                 opt.cr++;
         }
     }

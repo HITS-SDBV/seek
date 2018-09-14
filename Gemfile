@@ -131,6 +131,7 @@ source 'https://rails-assets.org' do
   gem 'rails-assets-vue', '~> 2.1.8'
   gem 'rails-assets-eonasdan-bootstrap-datetimepicker', '~> 4.17.42'
   gem 'rails-assets-x-editable', '~> 1.5.1'
+  gem 'rails-assets-underscore', '~> 1.8.3'
   gem 'rails-assets-d3', '~> 3.5.5'
   gem 'rails-assets-d3-tip', '~> 0.6.3'
   gem 'rails-assets-d3.svg.multibrush', '~> 0.9.1'

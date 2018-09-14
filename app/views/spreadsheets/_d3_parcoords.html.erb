@@ -1,0 +1,42 @@
+
+<!--<div id="wrapper" class="parcoords" ></div>-->
+<div id="parcoords_container" class="spreadsheet_popup" style="overflow: scroll;display: none">
+  <div class="spreadsheet_box_title">
+    <div style="float: left">Parallel Coordinates Plot</div>
+    <div style="float: right;"><a href="#" onclick="cleanup_parcoord_plot(); return false;">Close</a></div>
+    <br style="clear:both"/>
+  </div>
+  <div id="parcoords_plot" class="parcoords"></div>
+  <div id="png_container" class="parcoords spreadsheet_popup" style="max-height:600px;overflow: scroll;display: none"></div>
+
+  <div>
+
+    <div class = "pcButtons">
+      <!-- <label for="sltBrushMode">Filtering Modes per Column: </label>
+       <select id="sltBrushMode">
+       </select>-->
+      <label id="lblPredicate" for="sltPredicate">Match Conditions:</label>
+      <select id="sltPredicate">
+        <option>ALL</option>
+        <option>ANY</option>
+      </select>
+      <button id="btnReset">Reset Filters</button>
+      <button id="keepData">Keep Only Selection</button>
+      <button id="excludeData">Exclude Selection</button>
+      <button id="resetData">Reset Data</button>
+
+      <button id="export" class="export">Export PNG</button>
+      <!--    <button id="pcHelp" onclick="show_instructions(); return false;">Help</button>-->
+    </div>
+  </div>
+</div>
+
+
+<script type="text/javascript">
+    function cleanup_parcoord_plot() {
+        d3.selectAll('canvas').remove();
+        d3.selectAll('svg').remove();
+        d3.select('#instructions').remove();
+        $j('#parcoords_container').hide();
+    }
+</script>

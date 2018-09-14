@@ -509,6 +509,7 @@ GEM
     rails-assets-moment (2.18.1)
     rails-assets-typeahead.js (0.10.5)
       rails-assets-jquery (>= 1.7)
+    rails-assets-underscore (1.8.3)
     rails-assets-vue (2.1.10)
     rails-assets-x-editable (1.5.1)
       rails-assets-jquery (>= 1.6)
@@ -878,6 +879,7 @@ DEPENDENCIES
   rails-assets-eonasdan-bootstrap-datetimepicker (~> 4.17.42)!
   rails-assets-filesaverjs (~> 1.3.2)!
   rails-assets-typeahead.js (~> 0.10.5)!
+  rails-assets-underscore (~> 1.8.3)!
   rails-assets-vue (~> 2.1.8)!
   rails-assets-x-editable (~> 1.5.1)!
   rails-observers
