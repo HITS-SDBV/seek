@@ -635,7 +635,7 @@ def forbid_new_version_if_samples
     end
   end
 end
- n
+
   private
 
   def data_file_params
