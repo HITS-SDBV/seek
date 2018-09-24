@@ -1,0 +1,46 @@
+<div id="analysis_param_form" class="spreadsheet_popup" style="display:none" chosen_test="mytest"
+     xmlns="http://www.w3.org/1999/html" xmlns="http://www.w3.org/1999/html">
+  <div class="spreadsheet_box_title">
+    <div style="float: left">Analysis Input and Parameters</div>
+    <div style="float: right"><a href="#" onclick="$j('#analysis_param_form').hide(); return false;">Close</a></div>
+    <br style="clear:both"/>
+  </div>
+  <!--<div id="ipython_figure"></div>-->
+  <p>
+    Chosen Analysis: <b id="test_name"></b>
+  </p>
+  <%= form_tag_with_callbacks({:action => :pythonize},
+                              {:method=>:post,
+                               #:action=>"javascript:alert('in form action')", #send_to_python('ttest')",
+                               :loading => "$j('analysis_button').disabled=true;",
+                               :complete => "Element.hide('analysis_param_form');$j('analysis_button').disabled=false;",
+                               :id => "analysis_param_form",:remote => true}) do %>
+
+    <!--= hidden_field_tag :annotation_content_blob_id, @display_data_file.content_blob.id -->
+    <!--= hidden_field_tag :annotation_sheet_id, "0" -->
+
+
+    <p>
+      Cell Range:<br/>
+      <%= text_field_tag :annotation_cell_coverage, nil,:class=>"annotation_cell_coverage_class" %>
+    </p>
+
+    <%= submit_tag 'Run',:id=>"analysis_button", :onclick => "return send_to_jupyter();" %>
+  <% end %>
+</div>
+
+<script type="text/javascript">
+    function send_to_jupyter() {
+        test = $j("div#analysis_param_form").attr("chosen_test")
+        console.log(test)
+        send_to_python(test)
+    }
+
+    $j( document ).ready(function() {
+    //      $j('#analysis_button').click(function() {
+    //          test = $j("div#analysis_param_form").attr("chosen_test")
+    //          console.log(test)
+    //      });
+    });
+
+</script>

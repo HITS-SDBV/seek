@@ -708,6 +708,14 @@ function read_data_numbered() {
     return data_obj;
 }
 
+// should open an interim menu for adjusting range selections and analysis parameters
+function intermediate_analysis_menu(test, display_name) {
+ //   console.log("doing intermediate menu with test: ", jupyter_test);
+    $j("div.spreadsheet_popup").hide();
+    $j("div#analysis_param_form").attr("chosen_test", test)
+    $j("#test_name").text(display_name)
+    $j("div#analysis_param_form").show();
+}
 
 // parameter test is a string specifying which test to perform.
 function send_to_python(test){
