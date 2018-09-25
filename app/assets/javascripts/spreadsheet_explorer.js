@@ -234,57 +234,18 @@ $j(document).ready(function ($) {
 	})
     ;
 
-    //Select cells that are typed in the input field (triggered by 'enter' or special button)
-    // ',' separates different selections,  '!' separates location(sheets) from chosen range, ':' separates edges of range(A1:C20)
-    //possible forms: future addition: [file1:]
-    // 1. sheet1!A1:C10,sheet2!B3:J90, ...
-    // 2. sheet1:sheet4!A1:C10, ....
-    function select_typed_input(selection_text) {
-	//var active_sheet = $("div.active_sheet");
-	//var active_sheet_number = active_sheet[0].id.split('_')[1];
-	var selections_arr = selection_text.replace(/\s+/g,'').split(',');
-	deselect_cells();
-	var multiple = true;
-	var from_input = true;
-	$('#selection_data').val(selection_text);
-
-	//for (single_sel of selections_arr) {
-	for (k=0; k<selections_arr.length; k++ ){
-	    //console.log("single_selection: ", selections_arr[k]);
-
-	    //loc_element[0] = sheet information, could be multiple sheets, one sheet, or none (default: active_sheet)
-	    //loc_element[1] = range of cells, unless previous doesn't exist.
-	    var loc_element = selections_arr[k].split('!');
-
-	    //if no sheet specified, select given range on active sheet
-	    if (loc_element.length == 1) {
-		select_range(loc_element[0], null, multiple, from_input);
-
-		//sheet(s) were specified i.e "sheet1:sheet3"
-	    } else {
-		locations = loc_element[0].split(':');
-		var sheetNum1 = locations[0].match(/\d+/)[0];
-		var sheetNum2 = locations.length > 1 ? locations[1].match(/\d+/)[0]: sheetNum1;
-		//iterate on sheets to select the typed range on each
-		for (var i=sheetNum1;i<=sheetNum2;i++) {
-		    select_range(loc_element[1], i, multiple, from_input);
-		}
-	    }
-	} //done with a string of a single selection
-    }
-
     //Select cells that are typed in
     $('input#selection_data')
-	.keyup(function(e) {
-	    if(e.keyCode == 13) {
-		select_typed_input($('#selection_data').val());
-	    }
-	})
+        .keyup(function (e) {
+            if (e.keyCode == 13) {
+                select_typed_input($('#selection_data').val());
+            }
+        })
     ;
 
     //Select cells that are typed in when clicking on the "apply selection" button
-    $('#applySelection').click(function() {
-	select_typed_input($('#selection_data').val());
+    $('#applySelection').click(function () {
+        select_typed_input($('#selection_data').val());
     });
 
     //Resizable column/row headings
@@ -385,6 +346,45 @@ $j(document).ready(function ($) {
 
 
 });
+
+//Select cells that are typed in the input field (triggered by 'enter' or special button)
+// ',' separates different selections,  '!' separates location(sheets) from chosen range, ':' separates edges of range(A1:C20)
+//possible forms: future addition: [file1:]
+// 1. sheet1!A1:C10,sheet2!B3:J90, ...
+// 2. sheet1:sheet4!A1:C10, ....
+function select_typed_input(selection_text) {
+    //var active_sheet = $("div.active_sheet");
+    //var active_sheet_number = active_sheet[0].id.split('_')[1];
+    var selections_arr = selection_text.replace(/\s+/g, '').split(',');
+    deselect_cells();
+    var multiple = true;
+    var from_input = true;
+    $j('#selection_data').val(selection_text);
+
+    //for (single_sel of selections_arr) {
+    for (k = 0; k < selections_arr.length; k++) {
+        //console.log("single_selection: ", selections_arr[k]);
+
+        //loc_element[0] = sheet information, could be multiple sheets, one sheet, or none (default: active_sheet)
+        //loc_element[1] = range of cells, unless previous doesn't exist.
+        var loc_element = selections_arr[k].split('!');
+
+        //if no sheet specified, select given range on active sheet
+        if (loc_element.length == 1) {
+            select_range(loc_element[0], null, multiple, from_input);
+
+            //sheet(s) were specified i.e "sheet1:sheet3"
+        } else {
+            locations = loc_element[0].split(':');
+            var sheetNum1 = locations[0].match(/\d+/)[0];
+            var sheetNum2 = locations.length > 1 ? locations[1].match(/\d+/)[0] : sheetNum1;
+            //iterate on sheets to select the typed range on each
+            for (var i = sheetNum1; i <= sheetNum2; i++) {
+                select_range(loc_element[1], i, multiple, from_input);
+            }
+        }
+    } //done with a string of a single selection
+}
 
 function activate_sheet_from_resizable(div_obj) {
     var obj_id_sheetN = div_obj.parentNode.parentNode.parentNode.id.split('_');
@@ -710,10 +710,13 @@ function read_data_numbered() {
 
 // should open an interim menu for adjusting range selections and analysis parameters
 function intermediate_analysis_menu(test, display_name) {
- //   console.log("doing intermediate menu with test: ", jupyter_test);
     $j("div.spreadsheet_popup").hide();
+
+    //change displayed properties in the newly shown form according to current selections
     $j("div#analysis_param_form").attr("chosen_test", test)
     $j("#test_name").text(display_name)
+    $j('input#analysis_selection_data').val($j('#selection_data').val());
+
     $j("div#analysis_param_form").show();
 }
 

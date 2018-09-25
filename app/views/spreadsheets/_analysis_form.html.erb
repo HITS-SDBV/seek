@@ -22,8 +22,15 @@
 
     <p>
       Cell Range:<br/>
-      <%= text_field_tag :annotation_cell_coverage, nil,:class=>"annotation_cell_coverage_class" %>
+      <%= text_field_tag :analysis_selection_data, nil,:class=>"annotation_cell_coverage_class" %>
     </p>
+
+<!--
+    <p>
+      Some text:<br/>
+      < %= text_field_tag :some_text, nil %>
+    </p>
+-->
 
     <%= submit_tag 'Run',:id=>"analysis_button", :onclick => "return send_to_jupyter();" %>
   <% end %>
@@ -36,11 +43,35 @@
         send_to_python(test)
     }
 
-    $j( document ).ready(function() {
-    //      $j('#analysis_button').click(function() {
-    //          test = $j("div#analysis_param_form").attr("chosen_test")
-    //          console.log(test)
-    //      });
+    function apply_form_changes() {
+        select_typed_input($j('input#analysis_selection_data').val());
+    }
+
+    $j(document).ready(function () {
+
+        //prevent immediate submission on input changes when pressing 'Enter'
+        //if there are other input fields, apply changes and move to the next field. If on Enter on 'Submit', submit the form.
+        //TO DO: think about how to generalize applying the changes.. each input field does something different, where should that be defined?
+        var inputs = $j('form#analysis_param_form input')
+        console.log(inputs);
+        $j('form#analysis_param_form input:not([type="submit"])')
+            .keydown(function (e) {
+                if (e.keyCode == 13) {
+                    e.preventDefault();
+                    if (inputs[inputs.index(this) + 1] != null) {
+                        console.log(inputs[inputs.index(this) + 1]);
+                        inputs[inputs.index(this) + 1].focus();
+                    }
+                    console.log("interrupting Enter key, should not submit");
+                    apply_form_changes();         //applies changes no matter where we are
+                    return false;
+                }
+            });
+
+        //      $j('#analysis_button').click(function() {
+        //          test = $j("div#analysis_param_form").attr("chosen_test")
+        //          console.log(test)
+        //      });
     });
 
 </script>
