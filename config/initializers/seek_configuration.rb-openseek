@@ -101,14 +101,36 @@ def load_seek_config_defaults!
   Seek::Config.default :nbconvert_path, '/usr/local/bin/jupyter-nbconvert'
   Seek::Config.default :python_nb_basedir, './public/python_nb'
   Seek::Config.default :python_nb_tmp, './tmp'
+
+  # available notebook info:
+  # display_name: the name displaying on the menu in explore.html.erb.  Do not display if nil (e.g. T-test is shown once, despite 3 T-test options chosen through radio buttons)
+  # display_cell: which output cells to display in the html output (ipynb to html conversion)
+  # hide_source: when != zero, do not show source code (Input cells) in the html output
+  # cell: notebook cell placeholder for spreadsheet input
   Seek::Config.default :python_nb_notebooks, [
         {
           :id => "ttest",
           :display_name => 'T-Test',
           :cell => 1,
-	  :display_cell => [12,8],
-          :script => 'T_test.ipynb',
+          :display_cell => [12,8],
+          :script => 'ind_T_test.ipynb',
           :hide_source => 1
+        },
+        {
+            :id => "paired_ttest",
+            :display_name => nil,
+            :cell => 1,
+            :display_cell => [12,8],
+            :script => 'paired_T_test.ipynb',
+            :hide_source => 1
+        },
+        {
+            :id => "one_ttest",
+            :display_name => nil,
+            :cell => 1,
+            :display_cell => [12,8],
+            :script => 'one_sample_T_test.ipynb',
+            :hide_source => 1
         },
         {
           :id => "1wanova",

@@ -1,0 +1,22 @@
+<div id="ttest_form" style="display:none"
+     xmlns="http://www.w3.org/1999/html" xmlns="http://www.w3.org/1999/html">
+  <p>
+    <b>Type of T-test:</b><br/>
+
+    <div>
+      <input type="radio" id="independent" name="ttest_type" value="ind" checked onclick="$j('div#analysis_default_form').attr('chosen_test', 'ttest');"/>
+      Independent
+    </div>
+
+    <div>
+      <input type="radio" id="paired" name="ttest_type" value="Paired Sample" onclick="$j('div#analysis_default_form').attr('chosen_test', 'paired_ttest');"/>
+      Paired Sample
+    </div>
+
+    <div>
+      <input type="radio" id="onesample" name="ttest_type" value="One Sample" onclick="$j('div#analysis_default_form').attr('chosen_test', 'one_ttest');"/>
+      One Sample
+    </div>
+  </p>
+
+</div>

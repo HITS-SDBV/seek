@@ -713,11 +713,11 @@ function intermediate_analysis_menu(test, display_name) {
     $j("div.spreadsheet_popup").hide();
 
     //change displayed properties in the newly shown form according to current selections
-    $j("div#analysis_param_form").attr("chosen_test", test)
+    $j("div#analysis_default_form").attr("chosen_test", test)
     $j("#test_name").text(display_name)
     $j('input#analysis_selection_data').val($j('#selection_data').val());
-
-    $j("div#analysis_param_form").show();
+    $j("div#analysis_default_form").show();
+    $j("div#"+test+"_form").show();
 }
 
 // parameter test is a string specifying which test to perform.

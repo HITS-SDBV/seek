@@ -34,15 +34,17 @@
           <li role="presentation" class="dropdown-header">Simple statistical tests</li>
 
           <% Settings.defaults[:python_nb_notebooks].each do |notebook| %>
-          <li>
-              <%
-                call_id = notebook["id"]
-                call_text = "intermediate_analysis_menu('" + call_id + "', '" + notebook['display_name'] +"')"
-              %>
-              <a onclick="<%= call_text%>">
-                <%= notebook['display_name']%>
-              </a>
-          </li>
+            <% unless notebook['display_name'].nil? %>
+              <li>
+                <%
+                  call_id = notebook["id"]
+                  call_text = "intermediate_analysis_menu('" + call_id + "', '" + notebook['display_name'] +"')"
+                %>
+                <a onclick="<%= call_text%>">
+                  <%= notebook['display_name']%>
+                </a>
+              </li>
+            <% end %>
           <% end %>
         </ul>
       </div>
@@ -53,7 +55,7 @@
     <%= render :partial => "spreadsheets/annotation_form" %>
     <%= render :partial => "spreadsheets/export" %>
     <%= render :partial => "spreadsheets/plot" %>
-    <%= render :partial => "spreadsheets/analysis_form" %>
+    <%= render :partial => "spreadsheet_analysis/default_form" %>
     <%= render :partial => "spreadsheets/python_nb" %>
 
     <div id="annotations">

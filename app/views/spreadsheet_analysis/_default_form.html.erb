@@ -1,8 +1,8 @@
-<div id="analysis_param_form" class="spreadsheet_popup" style="display:none" chosen_test="mytest"
+<div id="analysis_default_form" class="spreadsheet_popup" style="display:none" chosen_test="mytest"
      xmlns="http://www.w3.org/1999/html" xmlns="http://www.w3.org/1999/html">
   <div class="spreadsheet_box_title">
     <div style="float: left">Analysis Input and Parameters</div>
-    <div style="float: right"><a href="#" onclick="$j('#analysis_param_form').hide(); return false;">Close</a></div>
+    <div style="float: right"><a href="#" onclick="cleanup_menu(); return false;">Close</a></div>
     <br style="clear:both"/>
   </div>
   <!--<div id="ipython_figure"></div>-->
@@ -13,12 +13,8 @@
                               {:method=>:post,
                                #:action=>"javascript:alert('in form action')", #send_to_python('ttest')",
                                :loading => "$j('analysis_button').disabled=true;",
-                               :complete => "Element.hide('analysis_param_form');$j('analysis_button').disabled=false;",
-                               :id => "analysis_param_form",:remote => true}) do %>
-
-    <!--= hidden_field_tag :annotation_content_blob_id, @display_data_file.content_blob.id -->
-    <!--= hidden_field_tag :annotation_sheet_id, "0" -->
-
+                               :complete => "cleanup_menu();$j('analysis_button').disabled=false;",
+                               :id => "analysis_default_form",:remote => true}) do %>
 
     <p>
       Cell Range:<br/>
@@ -31,20 +27,24 @@
       < %= text_field_tag :some_text, nil %>
     </p>
 -->
-
+    <%= render :partial => "spreadsheet_analysis/ttest" %>
     <%= submit_tag 'Run',:id=>"analysis_button", :onclick => "return send_to_jupyter();" %>
   <% end %>
 </div>
 
 <script type="text/javascript">
     function send_to_jupyter() {
-        test = $j("div#analysis_param_form").attr("chosen_test")
-        console.log(test)
-        send_to_python(test)
+        send_to_python($j("div#analysis_default_form").attr("chosen_test"))
     }
 
     function apply_form_changes() {
         select_typed_input($j('input#analysis_selection_data').val());
+    }
+
+    //hide form and sub-form
+    function cleanup_menu() {
+        $j("div#"+$j("div#analysis_default_form").attr("chosen_test")+"_form").hide();
+        $j('#analysis_default_form').hide();
     }
 
     $j(document).ready(function () {
@@ -52,24 +52,22 @@
         //prevent immediate submission on input changes when pressing 'Enter'
         //if there are other input fields, apply changes and move to the next field. If on Enter on 'Submit', submit the form.
         //TO DO: think about how to generalize applying the changes.. each input field does something different, where should that be defined?
-        var inputs = $j('form#analysis_param_form input')
+        var inputs = $j('form#analysis_default_form input')
         console.log(inputs);
-        $j('form#analysis_param_form input:not([type="submit"])')
+        $j('form#analysis_default_form input:not([type="submit"])')
             .keydown(function (e) {
                 if (e.keyCode == 13) {
                     e.preventDefault();
                     if (inputs[inputs.index(this) + 1] != null) {
-                        console.log(inputs[inputs.index(this) + 1]);
                         inputs[inputs.index(this) + 1].focus();
                     }
-                    console.log("interrupting Enter key, should not submit");
-                    apply_form_changes();         //applies changes no matter where we are
+                    apply_form_changes();         //applies input changes no matter where we are
                     return false;
                 }
             });
 
         //      $j('#analysis_button').click(function() {
-        //          test = $j("div#analysis_param_form").attr("chosen_test")
+        //          test = $j("div#analysis_default_form").attr("chosen_test")
         //          console.log(test)
         //      });
     });
