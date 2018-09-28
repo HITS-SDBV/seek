@@ -712,6 +712,8 @@ function read_data_numbered() {
 function intermediate_analysis_menu(test, display_name) {
     $j("div.spreadsheet_popup").hide();
 
+    cleanup_menu();
+
     //change displayed properties in the newly shown form according to current selections
     $j("div#analysis_default_form").attr("chosen_test", test)
     $j("#test_name").text(display_name)
@@ -721,7 +723,7 @@ function intermediate_analysis_menu(test, display_name) {
 }
 
 // parameter test is a string specifying which test to perform.
-function send_to_python(test){
+function send_to_python(test, analysis_params){
     data = {"marked" : read_data_numbered()};
     //test=$j("#stats_dropdown option:selected").text();
 
@@ -730,9 +732,9 @@ function send_to_python(test){
       	alert("Data object was empty.  Were any columns marked?");
       	return;
     }
-    // write test method into query json
+    // write test method and analysis parameters into query json
     data['test'] = test;
-
+    data['analysis_params'] = analysis_params;
     // tests for selection
     if ( data['test'] != 'Please select') {
 	     $j.post("pythonize",  data)
