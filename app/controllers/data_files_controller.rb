@@ -56,6 +56,7 @@ class DataFilesController < ApplicationController
   # Run a jupyter notebook from marked spreadsheet data
   def pythonize
     test = params['test']
+    Rails.logger.info params
     resultHash = call_ipython(test,params)
     
     # TO DO check for success +  delete intermediate files, in case call_ipython fails.

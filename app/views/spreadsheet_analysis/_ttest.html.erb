@@ -4,19 +4,36 @@
     <b>Type of T-test:</b><br/>
 
     <div>
-      <input type="radio" id="independent" name="ttest_type" value="ind" checked onclick="$j('div#analysis_default_form').attr('chosen_test', 'ttest');"/>
+      <input checked type="radio" id="independent" name="ttest_type" onclick="$j('p#pmean').hide();$j('div#analysis_default_form').attr('chosen_test', 'ttest');"/>
       Independent
     </div>
 
     <div>
-      <input type="radio" id="paired" name="ttest_type" value="Paired Sample" onclick="$j('div#analysis_default_form').attr('chosen_test', 'paired_ttest');"/>
+      <input type="radio" id="paired" name="ttest_type" onclick="$j('p#pmean').hide();$j('div#analysis_default_form').attr('chosen_test', 'paired_ttest');"/>
       Paired Sample
     </div>
 
     <div>
-      <input type="radio" id="onesample" name="ttest_type" value="One Sample" onclick="$j('div#analysis_default_form').attr('chosen_test', 'one_ttest');"/>
+      <input type="radio" id="onesample" name="ttest_type" onclick="$j('p#pmean').show();$j('div#analysis_default_form').attr('chosen_test', 'one_ttest');"/>
       One Sample
+
+      <p id="pmean" style="display:none">
+       Population mean:<br/>
+        <!-- to create a dictionary of analysis values use as name: analysis[popmean]. Not done because we get more nested dictionaries than needed -->
+        <%= text_field_tag "analysis_popmean", nil %>
+      </p>
+
     </div>
   </p>
 
 </div>
+<script type="text/javascript">
+  function reset_values() {
+      // Make first radio button (independent) T-test the default
+      $j('input[name=ttest_type]:first').prop('checked', true);
+      $j('p#pmean').hide();
+  }
+  $j(document).ready(function () {
+      reset_values();
+  })
+</script>

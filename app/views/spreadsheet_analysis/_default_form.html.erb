@@ -34,24 +34,36 @@
 
 <script type="text/javascript">
     function send_to_jupyter() {
-        send_to_python($j("div#analysis_default_form").attr("chosen_test"))
+        console.log("test: ", $j("div#analysis_default_form").attr("chosen_test"));
+        console.log("popmean: ", $j("input#analysis_popmean").val());
+        var analysis_params = {}
+        $j("input[name^=analysis]").each(function () {
+            analysis_params[$(this).name] =$(this).value
+        });
+        console.log(analysis_params);
+        send_to_python($j("div#analysis_default_form").attr("chosen_test"), analysis_params);
     }
 
+    //update form changes on selected cell ranges in the spreadsheet
     function apply_form_changes() {
         select_typed_input($j('input#analysis_selection_data').val());
     }
 
     //hide form and sub-form
     function cleanup_menu() {
-        $j("div#"+$j("div#analysis_default_form").attr("chosen_test")+"_form").hide();
+        // the test form to delete should be the last word in the "chosen_test" attribute, e.g. 'paired_ttest' --> 'ttest'
+        var form_name = $j("div#analysis_default_form").attr("chosen_test").split("_").slice(-1)[0]
+        console.log("cleanup menu: ", form_name )
+
+        $j("div#"+form_name+"_form").hide();
         $j('#analysis_default_form').hide();
+        reset_values();
     }
 
     $j(document).ready(function () {
 
         //prevent immediate submission on input changes when pressing 'Enter'
         //if there are other input fields, apply changes and move to the next field. If on Enter on 'Submit', submit the form.
-        //TO DO: think about how to generalize applying the changes.. each input field does something different, where should that be defined?
         var inputs = $j('form#analysis_default_form input')
         console.log(inputs);
         $j('form#analysis_default_form input:not([type="submit"])')
