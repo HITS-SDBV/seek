@@ -35,6 +35,7 @@ gem 'jbuilder-json_api'
 gem 'active_model_serializers', '~> 0.10.2'
 gem 'json-schema'
 gem 'json-diff'
+gem 'rubyzip', '~> 1.2.2'
 
 gem 'equivalent-xml'
 gem 'breadcrumbs_on_rails'
@@ -137,6 +138,7 @@ source 'https://rails-assets.org' do
   gem 'rails-assets-d3.svg.multibrush', '~> 0.9.1'
   gem 'rails-assets-blob-polyfill', '~> 1.0.20150320'
   gem 'rails-assets-filesaverjs', '~> 1.3.2'
+  gem 'rails-assets-chartjs', '~> 2.7.2'
 end
 
 group :production do

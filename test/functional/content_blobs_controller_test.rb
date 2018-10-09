@@ -186,6 +186,7 @@ class ContentBlobsControllerTest < ActionController::TestCase
     begin
       # Need to allow the request through so that `private_address_check` can catch it.
       WebMock.allow_net_connect!
+      assert PrivateAddressCheck.resolves_to_private_address?('192.168.0.1')
       VCR.turned_off do
         xml_http_request :get, :examine_url, data_url: 'http://192.168.0.1/config'
         assert_response :success
@@ -587,6 +588,8 @@ class ContentBlobsControllerTest < ActionController::TestCase
     assert @response.header['Content-Disposition'].include?('inline')
   end
 
+
+
   test 'should handle normal attachment download' do
     data = File.new("#{Rails.root}/test/fixtures/files/file_picture.png", 'rb').read
     df = Factory :data_file,
@@ -642,6 +645,36 @@ class ContentBlobsControllerTest < ActionController::TestCase
 
     get :download, sop_id: sop.id, id: data_file.content_blob.id, format: 'json'
     assert_response :not_found
+  end
+
+  test 'download sample type template blob' do
+    person = User.current_user.person
+    sample_type = Factory(:strain_sample_type, contributor:person)
+    refute_nil sample_type.template
+    assert sample_type.can_view?
+    assert sample_type.can_download?
+    assert_difference('ActivityLog.count') do
+      get :download, sample_type_id:sample_type.id, id:sample_type.template.id
+    end
+
+    assert_response :success
+    assert_equal "attachment; filename=\"#{sample_type.template.original_filename}\"", @response.header['Content-Disposition']
+
+    assert_equal sample_type, ActivityLog.last.activity_loggable
+    assert_equal 'download',ActivityLog.last.action
+  end
+
+  test 'cannot download sample type template you cannot view' do
+    login_as(Factory(:person))
+    sample_type = Factory(:strain_sample_type, contributor:Factory(:person))
+    refute_nil sample_type.template
+    refute sample_type.can_view?
+    refute sample_type.can_download?
+    assert_no_difference('ActivityLog.count') do
+      get :download, sample_type_id:sample_type.id, id:sample_type.template.id
+    end
+
+    assert_response :redirect
   end
 
   private

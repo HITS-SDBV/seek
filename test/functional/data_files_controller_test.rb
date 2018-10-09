@@ -2170,25 +2170,41 @@ class DataFilesControllerTest < ActionController::TestCase
     refute data_file.sample_template?
     assert_empty data_file.possible_sample_types
 
-    sample_type = SampleType.new title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id]
+    sample_type = SampleType.new title: 'visible1', uploaded_template: true, project_ids: [person.projects.first.id], contributor: person
     sample_type.content_blob = Factory(:sample_type_template_content_blob)
     sample_type.build_attributes_from_template
     # this is to force the full name to be 2 words, so that one row fails
     sample_type.sample_attributes.first.sample_attribute_type = Factory(:full_name_sample_attribute_type)
     sample_type.sample_attributes[1].sample_attribute_type = Factory(:datetime_sample_attribute_type)
     sample_type.save!
+    assert sample_type.can_view?
 
-    sample_type = SampleType.new title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id]
+    sample_type = SampleType.new title: 'visible2', uploaded_template: true, project_ids: [person.projects.first.id], contributor: person
     sample_type.content_blob = Factory(:sample_type_template_content_blob)
     sample_type.build_attributes_from_template
     # this is to force the full name to be 2 words, so that one row fails
     sample_type.sample_attributes.first.sample_attribute_type = Factory(:full_name_sample_attribute_type)
     sample_type.sample_attributes[1].sample_attribute_type = Factory(:datetime_sample_attribute_type)
     sample_type.save!
+    assert sample_type.can_view?
+
+    # this is a private one, from another project, and shouldn't show up
+    person2 = Factory(:person)
+    sample_type = SampleType.new title: 'private', uploaded_template: true, projects: person2.projects,contributor:person2
+    sample_type.content_blob = Factory(:sample_type_template_content_blob)
+    sample_type.build_attributes_from_template
+    # this is to force the full name to be 2 words, so that one row fails
+    sample_type.sample_attributes.first.sample_attribute_type = Factory(:full_name_sample_attribute_type)
+    sample_type.sample_attributes[1].sample_attribute_type = Factory(:datetime_sample_attribute_type)
+    disable_authorization_checks{sample_type.save!}
+    refute sample_type.can_view?
 
     get :select_sample_type, id: data_file
 
     assert_select 'select[name=sample_type_id] option', count: 2
+    assert_select 'select[name=sample_type_id] option', text:'visible1'
+    assert_select 'select[name=sample_type_id] option', text:'visible2'
+    assert_select 'select[name=sample_type_id] option', text:'private',count:0
   end
 
   test 'filtering for sample association form' do
@@ -2312,7 +2328,7 @@ class DataFilesControllerTest < ActionController::TestCase
     refute data_file.sample_template?
     assert_empty data_file.possible_sample_types
 
-    sample_type = SampleType.new title: 'from template', project_ids: [person.projects.first.id]
+    sample_type = SampleType.new title: 'from template', project_ids: [person.projects.first.id], contributor: person
     sample_type.content_blob = Factory(:sample_type_template_content_blob)
     sample_type.build_attributes_from_template
     # this is to force the full name to be 2 words, so that one row fails
@@ -2340,7 +2356,7 @@ class DataFilesControllerTest < ActionController::TestCase
     refute data_file.sample_template?
     assert_empty data_file.possible_sample_types
 
-    sample_type = SampleType.new title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id]
+    sample_type = SampleType.new title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id], contributor: person
     sample_type.content_blob = Factory(:strain_sample_data_content_blob)
     sample_type.build_attributes_from_template
     attribute_type = sample_type.sample_attributes[-2]
@@ -2370,7 +2386,7 @@ class DataFilesControllerTest < ActionController::TestCase
     refute data_file.sample_template?
     assert_empty data_file.possible_sample_types
 
-    sample_type = SampleType.new title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id]
+    sample_type = SampleType.new title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id], contributor: person
     sample_type.content_blob = Factory(:sample_type_template_content_blob)
     sample_type.build_attributes_from_template
     # this is to force the full name to be 2 words, so that one row fails
@@ -2407,7 +2423,7 @@ class DataFilesControllerTest < ActionController::TestCase
     refute data_file.sample_template?
     assert_empty data_file.possible_sample_types
 
-    sample_type = SampleType.new title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id]
+    sample_type = SampleType.new title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id], contributor: person
     sample_type.content_blob = Factory(:sample_type_template_content_blob)
     sample_type.build_attributes_from_template
     # this is to force the full name to be 2 words, so that one row fails
@@ -2415,7 +2431,7 @@ class DataFilesControllerTest < ActionController::TestCase
     sample_type.sample_attributes[1].sample_attribute_type = Factory(:datetime_sample_attribute_type)
     sample_type.save!
 
-    sample_type = SampleType.new title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id]
+    sample_type = SampleType.new title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id], contributor: person
     sample_type.content_blob = Factory(:sample_type_template_content_blob)
     sample_type.build_attributes_from_template
     # this is to force the full name to be 2 words, so that one row fails
@@ -2440,7 +2456,7 @@ class DataFilesControllerTest < ActionController::TestCase
     refute data_file.sample_template?
     assert_empty data_file.possible_sample_types
 
-    sample_type = SampleType.new title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id]
+    sample_type = SampleType.new title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id], contributor: person
     sample_type.content_blob = Factory(:sample_type_template_content_blob)
     sample_type.build_attributes_from_template
     # this is to force the full name to be 2 words, so that one row fails
@@ -2468,7 +2484,7 @@ class DataFilesControllerTest < ActionController::TestCase
     refute data_file.sample_template?
     assert_empty data_file.possible_sample_types
 
-    sample_type = SampleType.new title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id]
+    sample_type = SampleType.new title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id], contributor: person
     sample_type.content_blob = Factory(:sample_type_template_content_blob)
     sample_type.build_attributes_from_template
     sample_type.save!
@@ -2760,7 +2776,7 @@ class DataFilesControllerTest < ActionController::TestCase
     assay_asset1 = Factory(:assay_asset, asset: data_file, direction: AssayAsset::Direction::INCOMING,assay:Factory(:assay,contributor:person))
     assay_asset2 = Factory(:assay_asset, asset: data_file, direction: AssayAsset::Direction::OUTGOING,assay:Factory(:assay,contributor:person))
 
-    sample_type = SampleType.new(title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id])
+    sample_type = SampleType.new(title: 'from template', uploaded_template: true, project_ids: [person.projects.first.id], contributor: person)
     sample_type.content_blob = Factory(:sample_type_template_content_blob)
     sample_type.build_attributes_from_template
     sample_type.save!
@@ -3363,6 +3379,66 @@ class DataFilesControllerTest < ActionController::TestCase
     assert_select "input#assay_create_assay[checked=checked]", count:0
   end
 
+  test 'should select assay ids when passed to provide metadata' do
+    assay1 = Factory(:assay, contributor:User.current_user.person)
+    assay2 = Factory(:assay, contributor:User.current_user.person)
+
+
+    assert assay1.can_edit?
+    assert assay2.can_edit?
+
+
+    register_content_blob(skip_provide_metadata:true)
+
+    get :provide_metadata,assay_ids:[assay1.id]
+    assert_response :success
+
+    assert df=assigns(:data_file)
+    assert_includes df.assay_assets.collect(&:assay),assay1
+    refute_includes df.assay_assets.collect(&:assay),assay2
+  end
+
+  test 'should select multiple assay ids when passed to provide metadata' do
+    assay1 = Factory(:assay, contributor:User.current_user.person)
+    assay2 = Factory(:assay, contributor:User.current_user.person)
+    assay3 = Factory(:assay, contributor:User.current_user.person)
+
+    assert assay1.can_edit?
+    assert assay2.can_edit?
+    assert assay3.can_edit?
+
+    register_content_blob(skip_provide_metadata:true)
+
+    get :provide_metadata,assay_ids:[assay1.id,assay2.id]
+    assert_response :success
+
+    assert df=assigns(:data_file)
+    assert_includes df.assay_assets.collect(&:assay),assay1
+    assert_includes df.assay_assets.collect(&:assay),assay2
+    refute_includes df.assay_assets.collect(&:assay),assay3
+  end
+
+  test 'should not select non editable assay ids when passed to provide metadata' do
+    assay1 = Factory(:assay, contributor:User.current_user.person)
+    assay2 = Factory(:assay, contributor:User.current_user.person)
+    assay3 = Factory(:assay, contributor:Factory(:person))
+
+    assert assay1.can_edit?
+    assert assay2.can_edit?
+    refute assay3.can_edit?
+
+    register_content_blob(skip_provide_metadata:true)
+
+    get :provide_metadata,assay_ids:[assay3.id]
+    assert_response :success
+
+    #assay 3 is not allowed
+    assert df=assigns(:data_file)
+    refute_includes df.assay_assets.collect(&:assay),assay1
+    refute_includes df.assay_assets.collect(&:assay),assay2
+    refute_includes df.assay_assets.collect(&:assay),assay3
+  end
+
   def edit_max_object(df)
     add_tags_to_test_object(df)
     add_creator_to_test_object(df)
@@ -3373,7 +3449,7 @@ class DataFilesControllerTest < ActionController::TestCase
   def data_file_with_extracted_samples(contributor = User.current_user.person)
     data_file = Factory :data_file, content_blob: Factory(:sample_type_populated_template_content_blob),
                                     policy: Factory(:private_policy), contributor: contributor
-    sample_type = SampleType.new title: 'from template', project_ids: [Factory(:project).id]
+    sample_type = SampleType.new title: 'from template', projects: contributor.projects, contributor:contributor
     sample_type.content_blob = Factory(:sample_type_template_content_blob)
     create_sample_attribute_type
     sample_type.build_attributes_from_template
@@ -3510,7 +3586,7 @@ class DataFilesControllerTest < ActionController::TestCase
 
   # registers a new content blob, and triggers the javascript 'rightfield_extraction_ajax' call, and results in the metadata form HTML in the response
   # this replicates the old behaviour and result of calling #new
-  def register_content_blob
+  def register_content_blob(skip_provide_metadata:false)
 
     blob = {data: file_for_upload}
     assert_difference('ContentBlob.count') do
@@ -3519,6 +3595,6 @@ class DataFilesControllerTest < ActionController::TestCase
     content_blob_id = assigns(:data_file).content_blob.id
     session[:uploaded_content_blob_id] = content_blob_id.to_s
     post :rightfield_extraction_ajax,content_blob_id:content_blob_id.to_s,format:'js'
-    get :provide_metadata
+    get :provide_metadata unless skip_provide_metadata
   end
 end
