@@ -176,4 +176,5 @@ group :test, :development do
   gem 'webmock'
   gem 'teaspoon'
   gem 'teaspoon-mocha'
+  gem "phantomjs"
 end
