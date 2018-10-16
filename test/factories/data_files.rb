@@ -66,6 +66,10 @@ Factory.define(:small_test_spreadsheet_datafile, parent: :data_file) do |f|
   f.association :content_blob, factory: :small_test_spreadsheet_content_blob
 end
 
+Factory.define(:test_data_for_visualization, parent: :data_file) do |f|
+  f.association :content_blob, factory: :test_for_visualization_content_blob
+end
+
 Factory.define(:strain_sample_data_file, parent: :data_file) do |f|
   f.association :content_blob, factory: :strain_sample_data_content_blob
 end

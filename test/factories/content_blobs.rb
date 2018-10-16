@@ -61,6 +61,12 @@ Factory.define(:small_test_spreadsheet_content_blob, parent: :content_blob) do |
   f.data { File.new("#{Rails.root}/test/fixtures/files/small-test-spreadsheet.xls", 'rb').read }
 end
 
+Factory.define(:test_for_visualization_content_blob, parent: :content_blob) do |f|
+  f.content_type 'application/vnd.ms-excel'
+  f.original_filename 'samples-data-missing-columns.xlsx'
+  f.data { File.new("#{Rails.root}/test/fixtures/files/samples-data-missing-columns.xls", 'rb').read }
+end
+
 Factory.define(:tiff_content_blob, parent: :content_blob) do |f|
   f.content_type 'image/tiff'
   f.original_filename 'tiff_image_test.tif'

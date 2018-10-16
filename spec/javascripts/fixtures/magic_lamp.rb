@@ -50,7 +50,6 @@ MagicLamp.register_fixture(name: 'sharing/form') do
   render partial: 'sharing/form', locals: { object: @sop }
 end
 
-
 MagicLamp.register_fixture(name: 'projects-selector') do
   @sop = Factory(:sop, policy: Factory(:public_policy))
   @sop.valid?
@@ -63,4 +62,11 @@ MagicLamp.register_fixture(name: 'projects-selector') do
       id: @sop.id
   }
   render partial: 'projects/project_selector', locals: { resource: @sop }
+end
+
+MagicLamp.register_fixture(controller: DataFilesController, name: 'data_files/explore' ) do
+    @datafile = Factory(:test_data_for_visualization, policy: Factory(:public_policy))
+    @datafile.valid?
+    @display_df = @datafile.latest_version
+    render :explore
 end
