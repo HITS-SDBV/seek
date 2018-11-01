@@ -65,8 +65,8 @@ MagicLamp.register_fixture(name: 'projects-selector') do
 end
 
 MagicLamp.register_fixture(controller: DataFilesController, name: 'data_files/explore' ) do
-    @datafile = Factory(:test_data_for_visualization, policy: Factory(:public_policy))
+    @datafile = Factory(:xlsx_spreadsheet_datafile, policy: Factory(:public_policy))
     @datafile.valid?
-    @display_df = @datafile.latest_version
+    @display_data_file = @datafile.latest_version
     render :explore
 end

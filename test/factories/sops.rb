@@ -1,6 +1,6 @@
 # Sop
 Factory.define(:sop) do |f|
-  f.title 'This Sop'
+  f.sequence(:title) { |n| "This Sop #{n}"}
   f.with_project_contributor
 
   f.after_create do |sop|
