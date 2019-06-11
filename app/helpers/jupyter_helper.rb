@@ -60,49 +60,6 @@ module JupyterHelper
     return json_notebook
   end
 
-  # given a substitution dictionary, replace the "key"s in the galaxy notebook cell with "value"s.
-  def replace_placeholder_in_notebook_cell_galaxy(json_notebook, cell, jsonfile)
-
-    Rails.logger.info "######################################"
-    Rails.logger.info jsonfile
-    file = File.read(Settings.defaults[:python_nb_tmp]+"/"+jsonfile)
-    data_hash = JSON.parse(file)
-
-    sampledata = data_hash["marked"]
-    Rails.logger.info data_hash
-
-    json_notebook["cells"][cell]["source"].each_with_index do |line, i|
-
-     #Rails.logger.info "line:#{line}"
-      #Rails.logger.info "i:#{i}"
-
-      unless line["SAMPLENAME"].nil?
-        line["SAMPLENAME"] = sampledata["0"]["values"][1]
-      end
-
-      unless line["STEP1"].nil?
-        line["STEP1"] = sampledata["1"]["values"][1]
-      end
-
-      unless line["STEP2"].nil?
-        line["STEP2"] = sampledata["1"]["values"][2]
-      end
-
-      unless line["URL1"].nil?
-        line["URL1"] = sampledata["2"]["values"][1].match(/>(.*)</)[1]
-      end
-
-      unless line["URL2"].nil?
-        line["URL2"] = sampledata["2"]["values"][2].match(/>(.*)</)[1]
-      end
-
-    end
-
-
-    #Rails.logger.info "Cell after Replace: " + json_notebook["cells"][cell]["source"]
-
-  end
-
   def run_nbconvert_command(input, params, output=nil)
     # location of the nbconvert command to be run
     nbconvert = Settings.defaults[:nbconvert_path]

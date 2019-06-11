@@ -564,17 +564,12 @@ class DataFilesController < ApplicationController
 
     # 4. Put the tmp json spreadsheet input filename (from step 2) inside the python code and write out the new notebook to execute
     subs = {:JSON_INPUT => fnames['json']}
-    if (notebook_spec["id"]== "galaxy")
-      replace_placeholder_in_notebook_cell_galaxy(json_notebook, notebook_spec[:cell], fnames['json'])
-    else
-      replace_placeholder_in_notebook_cell(json_notebook, notebook_spec[:cell], subs)
-    end
-
+    replace_placeholder_in_notebook_cell(json_notebook, notebook_spec[:cell], subs)
     write_from_json(paths['base'], json_notebook)
 
     ### run nbconvert commands using run_nbconvert_command(input, params, output) from jupyter_helper
     # 1. execute the notebook
-    run_nbconvert_command(paths['base'], "--to notebook --execute --allow-errors --ExecutePreprocessor.timeout=600", fnames['processed'])
+    run_nbconvert_command(paths['base'], "--to notebook --execute --allow-errors", fnames['processed'])
 
     # 2. convert the processed notebook into HTML
     run_nbconvert_command(paths['processed'], "--to html")

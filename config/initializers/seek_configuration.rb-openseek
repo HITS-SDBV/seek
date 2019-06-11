@@ -136,7 +136,7 @@ def load_seek_config_defaults!
           :id => "1wanova",
           :display_name => '1-Way ANOVA',
           :cell => 2,
-          :display_cell => [5,6,7,11,12,13],
+	  :display_cell => [5,6,7,11,12,13],
           :script => 'anova.ipynb',
           :hide_source => 1
         },
@@ -147,14 +147,6 @@ def load_seek_config_defaults!
           :display_cell => [0,5,6,7,8,12,13,14,15,16],
           :script => '2wanova.ipynb',
           :hide_source => 1
-        },
-        {
-            :id => "galaxy",
-            :display_name => 'send to Galaxy',
-            :cell => 4,
-            :display_cell => [0,4,5,6,8,9,10,12,13,14,15,17,18,19],
-            :script => 'Galaxy_FAIRDOM_with_download.ipynb',
-            :hide_source => 1
         }
   ]
 
