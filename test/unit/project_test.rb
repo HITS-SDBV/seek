@@ -37,15 +37,44 @@ class ProjectTest < ActiveSupport::TestCase
     disable_authorization_checks {p.save!}
   end
 
+  test 'validate start and end date' do
+    # if start and end date are defined, then the end date must be later
+    p = Factory(:project,start_date:nil, end_date:nil)
+    assert p.valid?
+
+    #just an end date
+    p.end_date = DateTime.now
+    assert p.valid?
+
+    #start date in the future
+    p.start_date = DateTime.now + 1.day
+    refute p.valid?
+
+    #start date in the past
+    p.start_date = 1.day.ago
+    assert p.valid?
+
+    # no end date
+    p.start_date = DateTime.now + 1.day
+    p.end_date = nil
+    assert p.valid?
+
+    # future start and end dates are fine as long as end is later
+    p.start_date = DateTime.now + 1.day
+    p.end_date = DateTime.now + 2.day
+    assert p.valid?
+  end
+
   test 'to_rdf' do
     object = Factory :project, web_page: 'http://www.sysmo-db.org',
                                organisms: [Factory(:organism), Factory(:organism)]
     person = Factory(:person,project:object)
-    Factory :data_file, projects: [object], contributor:person
+    df = Factory :data_file, projects: [object], contributor:person
     Factory :data_file, projects: [object], contributor:person
     Factory :model, projects: [object], contributor:person
     Factory :sop, projects: [object], contributor:person
-    Factory :presentation, projects: [object], contributor:person
+    presentation = Factory :presentation, projects: [object], contributor:person
+    doc = Factory :document, projects: [object], contributor:person
     i = Factory :investigation, projects: [object], contributor:person
     s = Factory :study, investigation: i, contributor:person
     Factory :assay, study: s, contributor:person
@@ -57,6 +86,13 @@ class ProjectTest < ActiveSupport::TestCase
     RDF::Reader.for(:rdfxml).new(rdf) do |reader|
       assert reader.statements.count > 1
       assert_equal RDF::URI.new("http://localhost:3000/projects/#{object.id}"), reader.statements.first.subject
+
+      #check includes the data file due to bug OPSK-1919
+      refute_nil reader.statements.detect{|s| s.object == RDF::URI.new("http://localhost:3000/data_files/#{df.id}") && s.predicate == RDF::URI("http://jermontology.org/ontology/JERMOntology#hasItem")}
+
+      #document and presentation shouldn't be present (see OPSK-1920)
+      assert_nil reader.statements.detect{|s| s.object == RDF::URI.new("http://localhost:3000/presentations/#{presentation.id}") && s.predicate == RDF::URI("http://jermontology.org/ontology/JERMOntology#hasItem")}
+      assert_nil reader.statements.detect{|s| s.object == RDF::URI.new("http://localhost:3000/documents/#{doc.id}") && s.predicate == RDF::URI("http://jermontology.org/ontology/JERMOntology#hasItem")}
     end
   end
 
@@ -867,5 +903,28 @@ class ProjectTest < ActiveSupport::TestCase
 
     project.nels_enabled = 'yes please'
     assert_equal true, project.reload.nels_enabled
+  end
+
+  test 'funding code' do
+    person = Factory(:project_administrator)
+    proj = person.projects.first
+    User.with_current_user person.user do
+      proj.funding_codes='fish'
+      assert_equal ['fish'],proj.funding_codes.sort
+      proj.save!
+      proj=Project.find(proj.id)
+      assert_equal ['fish'],proj.funding_codes.sort
+
+      proj.funding_codes='1,2,3'
+      assert_equal ['1','2','3'],proj.funding_codes.sort
+      proj.save!
+      proj=Project.find(proj.id)
+      assert_equal ['1','2','3'],proj.funding_codes.sort
+
+      proj.update_attribute(:funding_codes,'a,b')
+      assert_equal ['a','b'],proj.funding_codes.sort
+    end
+
+
   end
 end

@@ -111,9 +111,34 @@ class AuthLookupUpdateQueueTest < ActiveSupport::TestCase
     end
   end
 
+  test 'updates to queue for sample' do
+    user = Factory :user
+    sample = nil
+    assert_difference('AuthLookupUpdateQueue.count', 1) do
+      sample = Factory :sample, contributor: user.person, policy: Factory(:private_policy),
+                       sample_type:Factory(:simple_sample_type,contributor:user.person)
+    end
+    assert_equal sample, AuthLookupUpdateQueue.order(:id).last.item
+
+    AuthLookupUpdateQueue.destroy_all
+    sample.policy.access_type = Policy::VISIBLE
+
+    assert_difference('AuthLookupUpdateQueue.count', 1) do
+      sample.policy.save
+    end
+    assert_equal sample, AuthLookupUpdateQueue.order(:id).last.item
+    AuthLookupUpdateQueue.destroy_all
+    sample.title = Time.now.to_s
+    assert_no_difference('AuthLookupUpdateQueue.count') do
+      disable_authorization_checks do
+        sample.save!
+      end
+    end
+  end
+
   test 'updates for remaining authorized assets' do
     user = Factory :user
-    types = Seek::Util.authorized_types - [Sop, Assay, Study]
+    types = Seek::Util.authorized_types - [Sop, Assay, Study, Sample]
     types.each do |type|
       entity = nil
       assert_difference('AuthLookupUpdateQueue.count', 1, "unexpected count for created type #{type.name}") do
@@ -204,5 +229,33 @@ class AuthLookupUpdateQueueTest < ActiveSupport::TestCase
 
       assert_equal [person2, person], AuthLookupUpdateQueue.order(:id).to_a.collect(&:item)
     end
+  end
+
+  test 'updates queue when creators added or removed' do
+    creator = Factory(:person)
+    person = Factory(:person)
+    df = Factory(:data_file, contributor:person)
+    User.with_current_user(person.user) do
+      AuthLookupUpdateQueue.destroy_all
+
+      df.creators << person
+      assert_equal [person],df.creators
+
+      assert_difference('AuthLookupUpdateQueue.count', 1) do
+        df.save!
+      end
+
+      AuthLookupUpdateQueue.destroy_all
+
+      df.creators = []
+      assert_equal [],df.creators
+
+      assert_difference('AuthLookupUpdateQueue.count', 1) do
+        df.save!
+      end
+
+    end
+
+
   end
 end

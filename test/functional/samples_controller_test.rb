@@ -11,6 +11,17 @@ class SamplesControllerTest < ActionController::TestCase
     @object = Factory(:sample, policy: Factory(:public_policy))
   end
 
+  test 'should return 406 when requesting RDF' do
+    login_as(Factory(:user))
+    sample = Factory :sample, contributor: User.current_user.person
+    assert sample.can_view?
+
+    get :show, id: sample, format: :rdf
+
+    assert_response :not_acceptable
+  end
+
+
   test 'index' do
     Factory(:sample, policy: Factory(:public_policy))
     get :index
@@ -585,6 +596,106 @@ class SamplesControllerTest < ActionController::TestCase
 
     assert_select 'div.related-items a[href=?]', sample_path(sample), text: /#{sample.title}/
   end
+
+  test 'related samples index link works correctly' do
+    person = Factory(:person)
+    login_as(person.user)
+
+    sample_type = Factory(:linked_optional_sample_type, project_ids: person.projects.map(&:id))
+    linked_sample = Factory(:patient_sample, sample_type: sample_type.sample_attributes.last.linked_sample_type, contributor: person)
+
+    sample = Sample.create!(sample_type: sample_type, project_ids: person.projects.map(&:id),
+                            data: { title: 'Middle sample',
+                                    patient: linked_sample.id})
+
+    linking_sample = Sample.create!(sample_type: sample_type, project_ids: person.projects.map(&:id),
+                            data: { title: 'Linking sample',
+                                    patient: sample.id})
+
+    with_config_value :related_items_limit, 1 do
+      get :show, id: sample
+    end
+
+    assert_response :success
+    assert_select 'div.related-items a[href=?]', sample_samples_path(sample), text: "View all 2 items"
+  end
+
+  test 'related samples index page works correctly' do
+    person = Factory(:person)
+    login_as(person.user)
+
+    sample_type = Factory(:linked_optional_sample_type, project_ids: person.projects.map(&:id))
+    linked_sample = Factory(:patient_sample, sample_type: sample_type.sample_attributes.last.linked_sample_type, contributor: person)
+
+    sample = Sample.create!(sample_type: sample_type, project_ids: person.projects.map(&:id),
+                            data: { title: 'Middle sample',
+                                    patient: linked_sample.id})
+
+    linking_sample = Sample.create!(sample_type: sample_type, project_ids: person.projects.map(&:id),
+                            data: { title: 'Linking sample',
+                                    patient: sample.id})
+
+    # For the sample containing the link
+    get :index, params: { sample_id: sample }
+
+    assert_response :success
+
+    assert_select '.list_item_title a[href=?]', sample_path(linked_sample), text: /#{linked_sample.title}/
+    assert_select '.list_item_title a[href=?]', sample_path(linking_sample), text: /#{linking_sample.title}/
+  end
+
+  test 'referring sample id is added to sample type link, if necessary' do
+    person = Factory(:person)
+    sample = Factory(:sample,policy:Factory(:private_policy,permissions:[Factory(:permission,contributor:person, access_type:Policy::VISIBLE)]))
+    sample_type = sample.sample_type
+    login_as(person.user)
+
+    assert sample.can_view?
+    refute sample_type.can_view?
+
+    get :show,id:sample.id
+    assert_response :success
+
+    assert_select 'a[href=?]',sample_type_path(sample_type,referring_sample_id:sample.id),text:/#{sample_type.title}/
+
+    sample2 = Factory(:sample,policy:Factory(:public_policy))
+    sample_type2 = sample2.sample_type
+
+    assert sample2.can_view?
+    assert sample_type2.can_view?
+
+    get :show,id:sample2.id
+    assert_response :success
+
+    # no referring sample required
+    assert_select 'a[href=?]',sample_type_path(sample_type2),text:/#{sample_type2.title}/
+
+  end
+
+  test 'referring sample id is added to sample type links in list items' do
+    person = Factory(:person)
+    sample = Factory(:sample,policy:Factory(:private_policy,permissions:[Factory(:permission,contributor:person, access_type:Policy::VISIBLE)]))
+    sample_type = sample.sample_type
+    sample2 = Factory(:sample,policy:Factory(:public_policy))
+    sample_type2 = sample2.sample_type
+    login_as(person.user)
+
+    assert sample.can_view?
+    refute sample_type.can_view?
+
+    assert sample2.can_view?
+    assert sample_type2.can_view?
+
+    get :index
+
+    assert_select 'a[href=?]',sample_type_path(sample_type,referring_sample_id:sample.id),text:/#{sample_type.title}/
+
+    # no referring sample required, ST is already visible
+    assert_select 'a[href=?]',sample_type_path(sample_type2),text:/#{sample_type2.title}/
+
+  end
+
+
 
   private
 

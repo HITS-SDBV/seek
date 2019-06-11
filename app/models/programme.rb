@@ -1,5 +1,5 @@
 class Programme < ActiveRecord::Base
-  include Seek::Taggable
+  include Seek::Annotatable
   include Seek::Rdf::RdfGeneration
 
   attr_accessor :administrator_ids
@@ -22,6 +22,7 @@ class Programme < ActiveRecord::Base
   has_many :people, -> { order('last_name ASC').uniq }, through: :group_memberships
   has_many :institutions, -> { uniq }, through: :work_groups
   has_many :admin_defined_role_programmes, dependent: :destroy
+  has_many :dependent_permissions, class_name: 'Permission', as: :contributor, dependent: :destroy
   accepts_nested_attributes_for :projects
 
   # validations
@@ -65,7 +66,7 @@ class Programme < ActiveRecord::Base
   end
 
   def assets
-    (data_files+models+sops+presentations+events+publications+documents).uniq.compact
+    (data_files + models + sops + presentations + events + publications + documents).uniq.compact
   end
 
   def can_be_edited_by?(user)
@@ -85,8 +86,7 @@ class Programme < ActiveRecord::Base
   end
 
   def can_delete?(user = User.current_user)
-    user && (user.is_admin? ||
-              user.person.is_programme_administrator?(self) && projects.empty?)
+    user && projects.empty? && (user.is_admin? || user.person.is_programme_administrator?(self))
   end
 
   def rejected?

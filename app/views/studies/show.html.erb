@@ -32,7 +32,14 @@
 
       </div>
     </div>
-    <%= render :partial=>"general/isa_graph", :locals => {:root_item => @study, :deep => false, :include_parents => true} %>
+    <% if @study.external_asset %>
+        <div class="row">
+          <div class="col-md-12">
+            <%= external_asset_details(@study) %>
+          </div>
+        </div>
+    <% end %>
+    <%= render partial: 'general/isa_graph', locals: { root_item: @study, options: { depth: 4 } } %>
   </div>
 
   <div class="col-md-3 col-sm-4">

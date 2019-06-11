@@ -11,8 +11,6 @@ class ApplicationController < ActionController::Base
 
   include CommonSweepers
 
-  before_filter :log_extra_exception_data
-
   # if the logged in user is currently partially registered, force the continuation of the registration process
   before_filter :partially_registered?
 
@@ -32,6 +30,8 @@ class ApplicationController < ActionController::Base
 
   before_filter :check_json_id_type, only: [:create, :update], if: :json_api_request?
   before_filter :convert_json_params, only: [:update, :destroy, :create, :new_version], if: :json_api_request?
+
+  before_filter :rdf_enabled? #only allows through rdf calls to supported types
 
   helper :all
 
@@ -395,15 +395,25 @@ class ApplicationController < ActionController::Base
                              user_agent: user_agent,
                              data: activity_loggable.title)
         end
-      when *Seek::Util.authorized_types.map { |t| t.name.underscore.pluralize.split('/').last } # TODO: Find a nicer way of doing this...
-        action = 'create' if action == 'upload_for_tool' || action == 'create_metadata'
+      when *Seek::Util.authorized_types.map { |t| t.name.underscore.pluralize.split('/').last } + ["sample_types"] # TODO: Find a nicer way of doing this...
+        action = 'create' if action == 'upload_for_tool' || action == 'create_metadata' || action == 'create_from_template'
         action = 'update' if action == 'new_version'
         action = 'inline_view' if action == 'explore'
         if %w(show create update destroy download inline_view).include?(action)
           check_log_exists(action, controller_name, object)
-          ActivityLog.create(action: action,
+            ActivityLog.create(action: action,
                              culprit: current_user,
                              referenced: object.projects.first,
+                             controller_name: controller_name,
+                             activity_loggable: object,
+                             data: object.title,
+                             user_agent: user_agent)
+        end
+      when 'snapshots'
+        if %(show create mint_doi_confirm download export_submit).include?(action)
+          ActivityLog.create(action: action,
+                             culprit: current_user,
+                             referenced: object.resource,
                              controller_name: controller_name,
                              activity_loggable: object,
                              data: object.title,
@@ -492,14 +502,14 @@ class ApplicationController < ActionController::Base
 
   def detect_for_filter(filter, resource, value)
     case
-    when resource.respond_to?(filter.pluralize)
-      resource.send(filter.pluralize).include? value
-    when resource.respond_to?("related_#{filter.pluralize}")
-      resource.send("related_#{filter.pluralize}").include?(value)
-    when resource.respond_to?(filter)
-      resource.send(filter) == value
-    else
-      false
+      when resource.respond_to?(filter.pluralize)
+        resource.send(filter.pluralize).include? value
+      when resource.respond_to?("related_#{filter.pluralize}")
+        resource.send("related_#{filter.pluralize}").include?(value)
+      when resource.respond_to?(filter)
+        resource.send(filter) == value
+      else
+        false
     end
   end
 
@@ -517,11 +527,7 @@ class ApplicationController < ActionController::Base
     payload[:user_agent] = request.user_agent
   end
 
-  def log_extra_exception_data
-    request.env['exception_notifier.exception_data'] = {
-      current_logged_in_user: current_user
-    }
-  end
+
 
   def redirect_to_sign_up_when_no_user
     redirect_to signup_path if User.count == 0
@@ -578,6 +584,17 @@ class ApplicationController < ActionController::Base
 
   def json_api_request?
     request.format.json?
+  end
+
+  # fitler that responds with :not_acceptible if request rdf for non rdf capable resource
+  def rdf_enabled?
+    return unless request.format.symbol == :rdf
+    unless Seek::Util.rdf_capable_types.include?(controller_name.classify.constantize)
+      respond_to do |format|
+        format.rdf { render text: 'This resource does not support RDF', status: :not_acceptable, content_type: 'text/plain' }
+      end
+      false
+    end
   end
 
   def json_api_errors(object)

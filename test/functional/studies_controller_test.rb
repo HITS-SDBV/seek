@@ -224,7 +224,7 @@ class StudiesControllerTest < ActionController::TestCase
   test "unauthorized user can't update" do
     s = Factory :study, policy: Factory(:private_policy)
     login_as(Factory(:user))
-    Factory :permission, contributor: User.current_user, policy: s.policy, access_type: Policy::VISIBLE
+    Factory(:permission, contributor: User.current_user.person, policy: s.policy, access_type: Policy::VISIBLE)
 
     put :update, id: s.id, study: { title: 'test' }
 
@@ -643,5 +643,16 @@ class StudiesControllerTest < ActionController::TestCase
     refute_equal investigation,study.investigation
   end
 
-
+  test 'can create with link to investigation in multiple projects' do
+    person = Factory(:person)
+    another_person = Factory(:person)
+    login_as(person)
+    projects = [person.projects.first, another_person.projects.first]
+    assert_includes projects[0].people, person
+    refute_includes projects[1].people, person
+    investigation = Factory(:investigation, contributor: another_person, projects:projects, policy: Factory(:publicly_viewable_policy))
+    assert_difference('Study.count', 1) do
+      post :create, study: { title: 'test', investigation_id: investigation.id }, policy_attributes: valid_sharing
+    end
+  end
 end

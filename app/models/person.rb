@@ -3,7 +3,7 @@ class Person < ActiveRecord::Base
   acts_as_annotation_source
 
   include Seek::Rdf::RdfGeneration
-  include Seek::Taggable
+  include Seek::Annotatable
   include Seek::Roles::AdminDefinedRoles
 
   auto_strip_attributes :email, :first_name, :last_name, :web_page
@@ -15,8 +15,6 @@ class Person < ActiveRecord::Base
   scope :default_order, -> { order('last_name, first_name') }
 
   before_save :first_person_admin_and_add_to_default_project
-  before_destroy :clean_up_and_assign_permissions
-  after_destroy :updated_contributed_items_contributor_after_destroy
 
   acts_as_notifiee
 
@@ -92,12 +90,15 @@ class Person < ActiveRecord::Base
 
   after_commit :queue_update_auth_table
 
+  has_many :dependent_permissions, class_name: 'Permission', as: :contributor, dependent: :destroy
+  before_destroy :reassign_contribution_permissions
+  after_destroy :updated_contributed_items_contributor_after_destroy
   after_destroy :update_publication_authors_after_destroy
-  
+
   # to make it look like a User
   def person
     self
-  end    
+  end
 
   # not registered profiles that match this email
   def self.not_registered_with_matching_email(email)
@@ -296,7 +297,7 @@ class Person < ActiveRecord::Base
 
   # all items, assets, ISA, samples and events that are linked to this person as a contributor
   def contributed_items
-    [Assay, Study, Investigation, DataFile, Document, Sop, Presentation, Model, Sample, Strain, Publication, Event].collect do |type|
+    [Assay, Study, Investigation, DataFile, Document, Sop, Presentation, Model, Sample, Strain, Publication, Event, SampleType].collect do |type|
       type.where(contributor_id:id)
     end.flatten.uniq.compact
   end
@@ -371,12 +372,9 @@ class Person < ActiveRecord::Base
     permissions.each(&:destroy)
   end
 
-  def clean_up_and_assign_permissions
-    # remove the permissions which are set on this person
-    remove_permissions
-
-    # retrieve the items that this person is contributor (owner for assay)
-    person_related_items = contributed_items
+  def reassign_contribution_permissions
+    # retrieve the items that this person is contributor (owner for assay), and that also has policy authorization
+    person_related_items = contributed_items.select{|item| item.respond_to?(:policy)}
 
     # check if anyone has manage right on the related_items
     # if not or if only the contributor then assign the manage right to pis||pals

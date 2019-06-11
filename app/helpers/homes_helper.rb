@@ -1,4 +1,6 @@
 
+
+
 module HomesHelper
   include UsersHelper
   include AssetsHelper
@@ -6,6 +8,9 @@ module HomesHelper
   include AvatarsHelper
 
   RECENT_SIZE = 5
+
+  DOWNLOAD_ACTIVITY_CACHE_PREFIX = 'download_activity_'.freeze
+  CREATE_ACTIVITY_CACHE_PREFIX = 'create_activity_'.freeze
 
   def home_description_text
     Seek::Config.home_description.html_safe
@@ -33,6 +38,14 @@ module HomesHelper
 
   def show_announcements?
     logged_in_and_registered? && Seek::Config.show_announcements
+  end
+
+  #displays the news feed panel and content
+  def home_news_feeds
+    render :partial=>"home_news_feeds"
+  rescue RuntimeError=>e
+    Rails.logger.error("Error fetching and parsing news feeds: #{e.message} - #{e.backtrace.join($/)}")
+    ''
   end
 
   # get multiple feeds from multiple sites
@@ -99,14 +112,13 @@ module HomesHelper
     entry_title = entry.title || 'Unknown title'
     feed_title = entry.feed_title || 'Unknown publisher'
     entry_date = determine_entry_date(entry)
-    entry_summary = truncate(strip_tags(entry.summary || entry.content), length: 500)
-    # TODO: Try removing .to_str when running Rails 4.2
-    tt = tooltip("#{CGI.unescapeHTML(entry_summary.to_str)} (#{entry_date.strftime('%c') unless entry_date.nil?})")
+    entry_summary = truncate(strip_tags(entry.summary || entry.content), length: 500) || 'No summary'
+    tt = tooltip("#{CGI.unescapeHTML(entry_summary)} (#{entry_date&.strftime('%c')})")
     [entry_date, entry_title, feed_title, tt]
   end
 
   def recently_downloaded_item_logs_hash(time = 1.month.ago, number_of_item = 10)
-    Rails.cache.fetch("download_activity_#{current_user_id}") do
+    selected_activity_logs = Rails.cache.fetch("#{DOWNLOAD_ACTIVITY_CACHE_PREFIX}#{current_user_id}") do
       activity_logs = ActivityLog.no_spider.where(['action = ? AND created_at > ?', 'download', time]).order('created_at DESC')
       selected_activity_logs = []
       activity_logs.each do |activity_log|
@@ -116,14 +128,14 @@ module HomesHelper
         end
         break if selected_activity_logs.length >= number_of_item
       end
-      return convert_logs_to_hash selected_activity_logs
-    end
-    convert_logs_to_hash []
+      selected_activity_logs
+    end || []
+    convert_logs_to_hash selected_activity_logs
   end
 
   def recently_added_item_logs_hash(time = 1.month.ago, number_of_item = 10)
-    Rails.cache.fetch("create_activity_#{current_user_id}") do
-      item_types = Seek::Util.user_creatable_types.collect(&:name) | [Project, Programme].collect(&:name)
+    selected_activity_logs = Rails.cache.fetch("#{CREATE_ACTIVITY_CACHE_PREFIX}#{current_user_id}") do
+      item_types = Seek::Util.user_creatable_types.collect(&:name) | [Project, Programme, Snapshot].collect(&:name)
       activity_logs = ActivityLog.where(['action = ? AND created_at > ? AND activity_loggable_type in (?)', 'create', time, item_types]).order('created_at DESC')
       selected_activity_logs = []
       activity_logs.each do |log|
@@ -132,9 +144,9 @@ module HomesHelper
         end
         break if selected_activity_logs.length >= number_of_item
       end
-      return convert_logs_to_hash selected_activity_logs
-    end
-    convert_logs_to_hash []
+      selected_activity_logs
+    end || []
+    convert_logs_to_hash selected_activity_logs
   end
 
   def convert_logs_to_hash(logs)
@@ -147,7 +159,7 @@ module HomesHelper
         description: item.respond_to?(:description) ? item.description : nil,
         abstract: item.respond_to?(:abstract) ? item.abstract : nil,
         created_at: log.created_at,
-        avatar_image: avatar(item, nil, true, nil, nil, true, 'home_asset_icon'),
+        avatar_image: avatar(item, 60, true, nil, nil, true, 'home_asset_icon'),
         url: show_resource_path(item),
         log_id: log.id
       }
@@ -182,11 +194,11 @@ module HomesHelper
     link_to(text, session_path(login: 'guest', password: 'guest'), method: :post)
   end
 
-  def frontpage_button(link, image_path, &block)
+  def frontpage_button(link, image_path)
     link_to link, class: 'seek-homepage-button', target: :_blank do
       image_tag(image_path) +
         content_tag(:span) do
-          block.call
+          yield
         end
     end
   end

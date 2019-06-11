@@ -8,6 +8,13 @@ class SnapshotsControllerTest < ActionController::TestCase
     doi_citation_mock
   end
 
+  test 'should return 406 when requesting RDF' do
+    create_assay_snapshot
+    get :show, assay_id: @assay.id, id: @snapshot.snapshot_number, format: :rdf
+
+    assert_response :not_acceptable
+  end
+
   test 'can get snapshot preview page' do
     user = Factory(:user)
     investigation = Factory(:investigation, policy: Factory(:publicly_viewable_policy), contributor: user.person)
@@ -481,6 +488,33 @@ class SnapshotsControllerTest < ActionController::TestCase
     end
     assert_response :success
     assert_select '#snapshot-citation', text: /error occurred/
+  end
+
+  test 'logs activities' do
+    create_investigation_snapshot
+    login_as(@user)
+
+    assert_difference('ActivityLog.count') do
+      get :show, investigation_id: @investigation, id: @snapshot
+      assert_response :success
+    end
+
+    activity = ActivityLog.last
+    assert_equal @snapshot, activity.activity_loggable
+    assert_equal @investigation, activity.referenced
+    assert_equal @user, activity.culprit
+    assert_equal 'show', activity.action
+
+    assert_difference('ActivityLog.count') do
+      get :download, investigation_id: @investigation, id: @snapshot
+      assert_response :success
+    end
+
+    activity = ActivityLog.last
+    assert_equal @snapshot, activity.activity_loggable
+    assert_equal @investigation, activity.referenced
+    assert_equal @user, activity.culprit
+    assert_equal 'download', activity.action
   end
 
   private

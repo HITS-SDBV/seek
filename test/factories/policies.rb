@@ -11,6 +11,12 @@ Factory.define(:edit_permission, class: Permission) do |f|
   f.access_type Policy::EDITING
 end
 
+Factory.define(:manage_permission, class: Permission) do |f|
+  f.association :contributor, factory: :person
+  f.association :policy
+  f.access_type Policy::MANAGING
+end
+
 # Policy
 Factory.define(:policy, class: Policy) do |f|
   f.name 'test policy'
@@ -61,7 +67,7 @@ end
 Factory.define(:favourite_group_membership) do |f|
   f.association :person
   f.association :favourite_group
-  f.access_type 1
+  f.access_type Policy::VISIBLE
 end
 
 # SpecialAuthCode

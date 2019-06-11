@@ -14,7 +14,7 @@ class PresentationsControllerTest < ActionController::TestCase
 
   def rest_api_test_object
     @object = Factory :presentation, contributor: User.current_user.person
-    @object.tag_with 'tag1'
+    @object.annotate_with 'tag1'
     @object
   end
 
@@ -187,7 +187,7 @@ class PresentationsControllerTest < ActionController::TestCase
     al = ActivityLog.last
     assert_equal 'download', al.action
     assert_equal pres, al.activity_loggable
-    assert_equal "attachment; filename=\"ppt_presentation.ppt\"", @response.header['Content-Disposition']
+    assert_equal 'attachment; filename="ppt_presentation.ppt"', @response.header['Content-Disposition']
     assert_equal 'application/vnd.ms-powerpoint', @response.header['Content-Type']
     assert_equal '82432', @response.header['Content-Length']
   end
@@ -288,12 +288,34 @@ class PresentationsControllerTest < ActionController::TestCase
     end
   end
 
+  test 'filter by publications using nested routes' do
+    assert_routing 'publications/7/presentations', controller: 'presentations', action: 'index', publication_id: '7'
+
+    person1 = Factory(:person)
+    person2 = Factory(:person)
+
+    pub1 = Factory(:publication)
+    pub2 = Factory(:publication)
+
+    pres1 = Factory(:presentation, policy: Factory(:public_policy), publications:[pub1])
+    pres2 = Factory(:presentation, policy: Factory(:public_policy), publications:[pub2])
+
+    get :index, publication_id: pub1.id
+    assert_response :success
+
+    assert_select 'div.list_item_title' do
+      assert_select 'a[href=?]', presentation_path(pres1), text: pres1.title
+      assert_select 'a[href=?]', presentation_path(pres2), text: pres2.title, count: 0
+    end
+  end
+
+
   test 'should display null license text' do
     presentation = Factory :presentation, policy: Factory(:public_policy)
 
     get :show, id: presentation
 
-    assert_select '.panel .panel-body span.none_text', text: 'No license specified'
+    assert_select '.panel .panel-body span#null_license', text: I18n.t('null_license')
   end
 
   test 'should display license' do
@@ -359,9 +381,27 @@ class PresentationsControllerTest < ActionController::TestCase
     assert_response :not_acceptable
   end
 
+  test 'events should be ordered by start date' do
+    person = Factory(:person)
+    login_as(person.user)
+    event_july = Factory(:event, title:'July event', start_date:DateTime.parse('1 July 2020'), contributor:person)
+    event_jan = Factory(:event, title:'Jan event', start_date:DateTime.parse('1 Jan 2020'), contributor:person)
+    event_sep = Factory(:event, title:'September event', start_date:DateTime.parse('1 September 2020'), contributor:person)
+    event_dec = Factory(:event, title:'December event', start_date:DateTime.parse('1 December 2020'), contributor:person)
+    event_march = Factory(:event, title:'March event', start_date:DateTime.parse('1 March 2020'), contributor:person)
+
+    get :new
+
+    desired = [event_july,event_jan,event_sep,event_dec,event_march].sort_by(&:start_date).collect{|e| e.id.to_s}
+    # first element is the blank, "select event ..."
+    ids = assert_select('select#possible_presentation_event_ids option').collect{|el| el.attributes['value'].value}.drop(1)
+
+    assert_equal desired, ids
+
+  end
+
   def edit_max_object(presentation)
     add_tags_to_test_object(presentation)
     add_creator_to_test_object(presentation)
   end
-
 end
