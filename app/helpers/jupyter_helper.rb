@@ -4,7 +4,12 @@ module JupyterHelper
   def get_notebook_spec_for_test(test)
     notebook_spec = Settings.defaults[:python_nb_notebooks].detect {|nb| nb["id"] == test }
     if notebook_spec.nil?
-      Rails.logger.error "ERROR: test " + test + " not implemented."
+	if test.nil?
+	      Rails.logger.error "ERROR: no test given!"
+	else
+
+	      Rails.logger.error "ERROR: test " + test + " not implemented."
+	end
       return
     end
     return notebook_spec
@@ -50,10 +55,14 @@ module JupyterHelper
   end
 
   # given a substitution dictionary, replace the "key"s in the specified notebook cell with "value"s.
+  # FIXME this replaces only the first line!
   def replace_placeholder_in_notebook_cell(json_notebook, cell, substitutions)
     json_notebook["cells"][cell]["source"].each_with_index do |line, i|
+      Rails.logger.info "Cell BEFORE Replace: " + json_notebook["cells"][cell]["source"][i].to_s
       substitutions.each do |key, value|
-        line[key.to_s] = value
+        if line[key.to_s] then
+		line[key.to_s] 	= value
+	end
       end
       Rails.logger.info "Cell after Replace: " + json_notebook["cells"][cell]["source"][i].to_s
     end

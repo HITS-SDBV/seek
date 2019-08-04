@@ -98,7 +98,7 @@ def load_seek_config_defaults!
   Seek::Config.default :copyright_addendum_content,'Additions copyright ...'
 
   #ipython
-  Seek::Config.default :nbconvert_path, '/usr/local/bin/jupyter-nbconvert'
+  Seek::Config.default :nbconvert_path, '/usr/bin/jupyter-nbconvert'
   Seek::Config.default :python_nb_basedir, './public/python_nb'
   Seek::Config.default :python_nb_tmp, './tmp'
 
@@ -152,7 +152,7 @@ def load_seek_config_defaults!
             :id => "galaxy",
             :display_name => 'send to Galaxy',
             :cell => 4,
-            :display_cell => [0,4,5,6,8,9,10,12,13,14,15,17,18,19],
+            :display_cell => [25,30],
             :script => 'Galaxy_FAIRDOM_with_download.ipynb',
             :hide_source => 1
         }
