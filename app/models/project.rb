@@ -1,7 +1,6 @@
-class Project < ActiveRecord::Base
+class Project < ApplicationRecord
   include Seek::Annotatable
-  include Seek::Rdf::RdfGeneration
-  include Seek::Rdf::ReactToAssociatedChange
+  include HasSettings
 
   acts_as_yellow_pages
   title_trimmer
@@ -22,10 +21,10 @@ class Project < ActiveRecord::Base
   has_and_belongs_to_many :documents
 
   has_many :work_groups, dependent: :destroy, inverse_of: :project
-  has_many :institutions, through: :work_groups, before_remove: :group_memberships_empty?, inverse_of: :projects
+  has_many :institutions, through: :work_groups, inverse_of: :projects
   has_many :group_memberships, through: :work_groups, inverse_of: :project
   # OVERRIDDEN in Seek::ProjectHierarchy if Seek::Config.project_hierarchy_enabled
-  has_many :people, -> { order('last_name ASC').uniq }, through: :group_memberships
+  has_many :people, -> { order('last_name ASC').distinct }, through: :group_memberships
 
   has_many :former_group_memberships, -> { where('time_left_at IS NOT NULL AND time_left_at <= ?', Time.now) },
            through: :work_groups, source: :group_memberships
@@ -45,26 +44,17 @@ class Project < ActiveRecord::Base
 
   # for handling the assignment for roles
   attr_accessor :project_administrator_ids, :asset_gatekeeper_ids, :pal_ids, :asset_housekeeper_ids
-  after_save :handle_project_administrator_ids, if: '@project_administrator_ids'
-  after_save :handle_asset_gatekeeper_ids, if: '@asset_gatekeeper_ids'
-  after_save :handle_pal_ids, if: '@pal_ids'
-  after_save :handle_asset_housekeeper_ids, if: '@asset_housekeeper_ids'
+  after_save :handle_project_administrator_ids, if: -> { @project_administrator_ids }
+  after_save :handle_asset_gatekeeper_ids, if: -> { @asset_gatekeeper_ids }
+  after_save :handle_pal_ids, if: -> { @pal_ids }
+  after_save :handle_asset_housekeeper_ids, if: -> { @asset_housekeeper_ids }
 
-
-  # SEEK projects suffer from having 2 types of ancestor and descendant,that were added separately - those from the historical lineage of the project, and also from
-  # the hierarchical tree structure that can be. For this reason and to avoid the clash, these anscestors and descendants have been renamed.
-  # However, in the future it would probably be more appropriate to change these back to simply ancestor and descendant, and rename the hierarchy struture
-  # to use parents/children.
-  belongs_to :lineage_ancestor, class_name: 'Project', foreign_key: :ancestor_id
-  has_many :lineage_descendants, class_name: 'Project', foreign_key: :ancestor_id
 
   scope :default_order, -> { order('title') }
   scope :without_programme, -> { where('programme_id IS NULL') }
 
   validates :web_page, url: {allow_nil: true, allow_blank: true}
   validates :wiki_page, url: {allow_nil: true, allow_blank: true}
-
-  validate :lineage_ancestor_cannot_be_self
 
   validates :title, uniqueness: true
   validates :title, length: { maximum: 255 }
@@ -80,20 +70,9 @@ class Project < ActiveRecord::Base
   #  is to be used)
   belongs_to :default_policy, class_name: 'Policy', dependent: :destroy, autosave: true
 
-  has_many :settings, class_name: 'Settings', as: :target, dependent: :destroy
-
   # FIXME: temporary handler, projects need to support multiple programmes
   def programmes
     [programme].compact
-  end
-
-
-  def group_memberships_empty?(institution)
-    work_group = WorkGroup.where(['project_id=? AND institution_id=?', id, institution.id]).first
-    unless work_group.people.empty?
-      fail WorkGroupDeleteError.new('You can not delete the ' + work_group.description + '. This Work Group has ' + work_group.people.size.to_s + " people associated with it.
-                           Please disassociate first the people from this Work Group.")
-    end
   end
 
   alias_attribute :webpage, :web_page
@@ -105,7 +84,7 @@ class Project < ActiveRecord::Base
   has_many :dependent_permissions, class_name: 'Permission', as: :contributor, dependent: :destroy
 
   def assets
-    data_files | sops | models | publications | presentations | documents
+    data_files | sops | models | publications | presentations | documents | workflows | nodes
   end
 
   def institutions=(new_institutions)
@@ -165,33 +144,64 @@ class Project < ActiveRecord::Base
   end
 
   def site_password
-    settings['site_password']
+    settings.get('site_password')
   end
 
   def site_password= password
-    settings['site_password'] = password
+    settings.set('site_password', password)
   end
 
   def site_username
-    settings['site_username']
+    settings.get('site_username')
   end
 
   def site_username= username
-    settings['site_username'] = username
+    settings.set('site_username', username)
   end
 
   def nels_enabled
-    settings['nels_enabled']
+    settings.get('nels_enabled')
   end
 
   def nels_enabled= checkbox_value
-    settings['nels_enabled'] = !(checkbox_value == '0' || !checkbox_value)
+    settings.set('nels_enabled', !(checkbox_value == '0' || !checkbox_value))
   end
 
   # indicates whether this project has a person, or associated user, as a member
   def has_member?(user_or_person)
     user_or_person = user_or_person.try(:person)
     people.include? user_or_person
+  end
+
+  def members= replacement_members
+    current = self.current_group_memberships.collect {|g| {:person_id => g.person_id, :institution_id => g.institution.id}}
+    replacement = replacement_members.collect {|rm| {:person_id => rm['person_id'].to_i, :institution_id => rm['institution_id'].to_i}}
+
+    to_remove = current - replacement
+    to_add = replacement - current
+
+    unless to_add.nil?
+      to_add.each do |new_info|
+        person = Person.find(new_info[:person_id])
+        institution = Institution.find(new_info[:institution_id])
+        unless person.nil? || institution.nil?
+          person.add_to_project_and_institution(self, institution)
+          person.save!
+        end
+      end
+    end
+
+    unless to_remove.nil?
+      to_remove.each do |r|
+        person = Person.find(r[:person_id])
+        institution = Institution.find(r[:institution_id])
+        gms = self.current_group_memberships.all.select {|gm| gm.person.id == r[:person_id] && gm.institution.id == r[:institution_id]}
+        unless gms.empty?
+          person.group_memberships.destroy(gms.first)
+        end
+      end
+
+    end
   end
 
   def person_roles(person)
@@ -201,54 +211,21 @@ class Project < ActiveRecord::Base
     person_project_membership.project_positions
   end
 
-  def can_be_edited_by?(user)
-    user && (has_member?(user) || can_be_administered_by?(user))
+  def can_edit?(user = User.current_user)
+    return false unless user
+    return true if new_record? && self.class.can_create?
+    has_member?(user) || can_manage?(user)
   end
 
-  # whether this project can be administered by the given user, or current user if none is specified
-  def can_be_administered_by?(user = User.current_user)
+  def can_manage?(user = User.current_user)
     return false unless user
     user.is_admin? || user.is_project_administrator?(self) || user.is_programme_administrator?(programme)
   end
 
-  # all projects that can be administered by the given user, or ghe current user if none is specified
-  def self.all_can_be_administered(user = User.current_user)
-    Project.all.select do |project|
-      project.can_be_administered_by?(user)
-    end
-  end
-
-  def can_edit?(user = User.current_user)
-    new_record? || can_be_edited_by?(user)
-  end
-
   def can_delete?(user = User.current_user)
-    user && user.is_admin? && work_groups.collect(&:people).flatten.empty?
-  end
-
-  def lineage_ancestor_cannot_be_self
-    if lineage_ancestor == self
-      errors.add(:lineage_ancestor, 'cannot be the same as itself')
-    end
-  end
-
-  # allows a new project to be spawned off as a descendant of this project, retaining the same membership but existing
-  # as a new project entity. attributes may be passed to override those being copied. The ancestor and memberships will
-  # automatically be assigned and carried over, and the avatar will be set to nil
-  def spawn(attributes = {})
-    child = dup
-    work_groups.each do |wg|
-      new_wg = WorkGroup.new(institution: wg.institution, project: child)
-      child.work_groups << new_wg
-      wg.group_memberships.each do |gm|
-        new_gm = GroupMembership.new(person: gm.person, work_group: wg)
-        new_wg.group_memberships << new_gm
-      end
-    end
-    child.assign_attributes(attributes)
-    child.avatar = nil
-    child.lineage_ancestor = self
-    child
+    user && user.is_admin? && work_groups.collect(&:people).flatten.empty? &&
+        investigations.empty? && studies.empty? && assays.empty? && assets.empty? &&
+        samples.empty? && sample_types.empty?
   end
 
   def self.can_create?
@@ -321,5 +298,7 @@ class Project < ActiveRecord::Base
 
   # should put below at the bottom in order to override methods for hierarchies,
   # Try to find a better way for overriding methods regardless where to include the module
-  include Seek::ProjectHierarchies::ProjectExtension if Seek::Config.project_hierarchy_enabled
+  if Seek::Config.project_hierarchy_enabled
+    include Seek::ProjectHierarchies::ProjectExtension
+  end
 end

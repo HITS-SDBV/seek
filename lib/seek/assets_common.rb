@@ -19,7 +19,7 @@ module Seek
     end
 
     def anonymous_request_for_previous_version?(asset, requested_version)
-      (!(User.logged_in_and_member?) && requested_version.to_i != asset.latest_version.version)
+      (!User.logged_in_and_member? && requested_version.to_i != asset.latest_version.version)
     end
 
     def update_relationships(asset, params)
@@ -32,9 +32,9 @@ module Seek
       mail = Mailer.request_resource(current_user, resource, details)
       mail.deliver_later
 
-      render :update do |page|
-        html = "An email has been sent on your behalf to <b>#{resource.managers_names}</b> requesting the file <b>#{h(resource.title)}</b>."
-        page[:requesting_resource_status].replace_html(html)
+      @resource = resource
+      respond_to do |format|
+        format.js { render template: 'assets/request_resource' }
       end
     end
 
@@ -52,6 +52,22 @@ module Seek
       respond_to do |format|
         format.json { render json: items.to_json }
       end
+    end
+
+    # the page to return to on an update validation failure, default to 'edit' if the referer is not found
+    def update_validation_error_return_action
+      previous = Rails.application.routes.recognize_path(request.referrer)
+      if previous && previous[:action]
+        previous[:action] || 'edit'
+      else
+        'edit'
+      end
+    end
+
+    def params_for_controller
+      name = controller_name.singularize
+      method = "#{name}_params"
+      send(method)
     end
   end
 end

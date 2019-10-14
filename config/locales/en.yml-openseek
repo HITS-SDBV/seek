@@ -13,6 +13,7 @@ en:
     modelling_analysis:  "Modelling analysis"
 
   data_file: "Data file"
+  discipline: "Discipline"
   document: "Document"
   model: "Model"
   sop: "SOP"
@@ -58,6 +59,16 @@ en:
     isa_best_practice: "ISA best practice"
 
   favourite_group: "favourite groups"
+
+  add_new_dropdown:
+    button: "Add new"
+    option: "Add new"
+
+  actions_button: "Actions"
+  submit_button:
+    upload: 'Upload and Save'
+    create: 'Create'
+    update: 'Update'
 
   access:
     determined_by_group: "Individual access rights for each member"

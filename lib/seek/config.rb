@@ -306,7 +306,13 @@ module Seek
       val
     end
 
-    if Settings.table_exists?
+    use_db = begin
+      Settings.table_exists?
+    rescue StandardError
+      false
+    end
+
+    if use_db
       def get_value(setting, conversion = nil)
         result = Settings.global.fetch(setting)
         if result
@@ -411,6 +417,10 @@ module Seek
 
     read_project_setting_attributes.each do |method, opts|
       register_encrypted_setting(method) if opts && opts[:encrypt]
+    end
+
+    def self.schema_org_supported?
+      true
     end
   end
 end

@@ -1,4 +1,6 @@
-class Presentation < ActiveRecord::Base
+class Presentation < ApplicationRecord
+
+   include Seek::BioSchema::Support
 
    attr_accessor :orig_data_file_id
 

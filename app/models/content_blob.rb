@@ -5,14 +5,14 @@ require 'tmpdir'
 require 'docsplit'
 require 'rest-client'
 
-class ContentBlob < ActiveRecord::Base
+class ContentBlob < ApplicationRecord
   include Seek::ContentTypeDetection
   include Seek::ContentExtraction
   include Seek::UrlValidation
   prepend Seek::Openbis::Blob
   prepend Nels::Blob
 
-  belongs_to :asset, polymorphic: true
+  belongs_to :asset, polymorphic: true, autosave: false
 
   # the actual data value stored in memory. If this could be large, then using :tmp_io_object is preferred
   attr_writer :data
@@ -251,7 +251,16 @@ class ContentBlob < ActiveRecord::Base
 
     if @tmp_io_object.respond_to?(:path)
       @tmp_io_object.flush if @tmp_io_object.respond_to? :flush
-      FileUtils.mv @tmp_io_object.path, filepath
+      if @tmp_io_object.path
+        FileUtils.cp @tmp_io_object.path, filepath
+
+        # only clean up if object is within the temp (/tmp/) directory, otherwise the original file should be kept
+        if @tmp_io_object.path.start_with?("#{Dir.tmpdir}#{File::SEPARATOR}")
+          File.delete(@tmp_io_object.path)
+        end
+
+      end
+
     else
       @tmp_io_object.rewind
       File.open(filepath, 'wb+') do |f|

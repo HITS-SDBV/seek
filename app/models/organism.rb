@@ -1,7 +1,7 @@
-class Organism < ActiveRecord::Base
+class Organism < ApplicationRecord
   include Seek::Rdf::RdfGeneration
-  include Seek::ProgrammeCompat
   include Seek::Search::BackgroundReindexing
+  include Seek::BioSchema::Support
 
   acts_as_favouritable
   grouped_pagination
@@ -16,6 +16,7 @@ class Organism < ActiveRecord::Base
   has_many :samples, through: :strains
 
   has_and_belongs_to_many :projects
+  has_many :programmes, through: :projects
 
   before_validation :convert_concept_uri
 

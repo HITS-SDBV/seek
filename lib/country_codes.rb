@@ -1,28 +1,37 @@
 module CountryCodes
-    @@codes = Hash.new
-    File.open(File.join(Rails.root, 'config', 'countries.tab')).each do |record|
-      parts = record.split("\t")
-      @@codes[parts[0]] = parts[1].strip
+  # The codes without flags below were discovered using the following:
+  # ISO3166::Country.all.collect(&:alpha2).uniq.compact.reject{ |c| File.exist?(Rails.root.join("app/assets/images/famfamfam_flags/#{c.downcase}.png")) }
+  VALID_CODES_WITHOUT_FLAGS = ["MF", "SX", "AQ", "IM", "SS", "BQ", "CW", "JE", "GG", "BL"].freeze
+
+  def self.country(code)
+    return nil if code.nil?
+    if country = ISO3166::Country[code]
+      #may be better to use the locale, but currently using 'en' to remain consistent with previous behaviour
+      country.translations['en']
     end
-    
-    #puts "countries = " + @@codes.to_s
-    
-    def self.country(code)
-      @@codes[code]
+
+  end
+
+  #always return the code, whether country is the name or already the code
+  def self.force_code(country)
+    return nil if country.nil?
+    if country.length == 2
+      code(country(country))
+    else
+      code(country)
     end
-    
-    def self.code(country)
-      c = nil
-      @@codes.each do |key, val|
-        if(country.downcase.strip == val.downcase)
-          c = key.downcase
-          break
-        end
-      end
-      return c
-    end
-    
-    def self.valid_code?(code)
-      @@codes.key?(code)
-    end
+  end
+
+  def self.code(country)
+    return nil if country.nil?
+    ISO3166::Country.find_country_by_name(country)&.alpha2
+  end
+
+  def self.valid_code?(code)
+    ISO3166::Country[code].present?
+  end
+
+  def self.has_flag?(code)
+    valid_code?(code) && VALID_CODES_WITHOUT_FLAGS.exclude?(code&.upcase)
+  end
 end

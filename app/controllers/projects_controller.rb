@@ -1,24 +1,23 @@
 require 'seek/custom_exception'
 
 class ProjectsController < ApplicationController
-  include WhiteListHelper
   include Seek::IndexPager
   include CommonSweepers
   include Seek::DestroyHandling
   include ApiHelper
 
-  before_filter :find_requested_item, only: %i[show admin edit update destroy asset_report admin_members
+  before_action :find_requested_item, only: %i[show admin edit update destroy asset_report admin_members
                                                admin_member_roles update_members storage_report request_membership overview]
-  before_filter :find_assets, only: [:index]
-  before_filter :auth_to_create, only: %i[new create]
-  before_filter :is_user_admin_auth, only: %i[manage destroy]
-  before_filter :editable_by_user, only: %i[edit update]
-  before_filter :administerable_by_user, only: %i[admin admin_members admin_member_roles update_members storage_report]
-  before_filter :member_of_this_project, only: [:asset_report], unless: :admin_logged_in?
-  before_filter :login_required, only: [:request_membership]
-  before_filter :allow_request_membership, only: [:request_membership]
+  before_action :find_assets, only: [:index]
+  before_action :auth_to_create, only: %i[new create]
+  before_action :is_user_admin_auth, only: %i[manage destroy]
+  before_action :editable_by_user, only: %i[edit update]
+  before_action :administerable_by_user, only: %i[admin admin_members admin_member_roles update_members storage_report]
+  before_action :member_of_this_project, only: [:asset_report], unless: :admin_logged_in?
+  before_action :login_required, only: [:request_membership]
+  before_action :allow_request_membership, only: [:request_membership]
 
-  skip_before_filter :project_membership_required
+  skip_before_action :project_membership_required
 
   cache_sweeper :projects_sweeper, only: %i[update create destroy]
   include Seek::BreadCrumbs
@@ -78,12 +77,6 @@ class ProjectsController < ApplicationController
 
     respond_to do |format|
       format.html { render template: 'projects/asset_report/report' }
-    end
-  end
-
-  def admin
-    respond_to do |format|
-      format.html # admin.html.erb
     end
   end
 
@@ -162,7 +155,8 @@ class ProjectsController < ApplicationController
   # POST /projects
   # POST /projects.xml
   def create
-    @project = Project.new(project_params)
+    @project = Project.new
+    @project.assign_attributes(project_params)
     @project.build_default_policy.set_attributes_with_sharing(params[:policy_attributes]) if params[:policy_attributes]
 
     respond_to do |format|
@@ -174,6 +168,19 @@ class ProjectsController < ApplicationController
           person.is_project_administrator = true, @project
           disable_authorization_checks { person.save }
         end
+        members = params[:project][:members]
+        if members.nil?
+          members = []
+        end
+        members.each { | member|
+          person = Person.find(member[:person_id])
+          institution = Institution.find(member[:institution_id])
+          unless person.nil? || institution.nil?
+            person.add_to_project_and_institution(@project, institution)
+            person.save!
+          end
+        }
+        update_administrative_roles
         flash[:notice] = "#{t('project')} was successfully created."
         format.html { redirect_to(@project) }
         # format.json {render json: @project, adapter: :json, status: 200 }
@@ -188,15 +195,18 @@ class ProjectsController < ApplicationController
   # PUT /projects/1   , polymorphic: [:organism]
   # PUT /projects/1.xml
   def update
-    @project.default_policy = (@project.default_policy || Policy.default).set_attributes_with_sharing(params[:policy_attributes]) if params[:policy_attributes]
+    if @project.can_manage?(current_user)
+      @project.default_policy = (@project.default_policy || Policy.default).set_attributes_with_sharing(params[:policy_attributes]) if params[:policy_attributes]
+    end
 
     begin
       respond_to do |format|
         if @project.update_attributes(project_params)
-          if Seek::Config.email_enabled && !@project.can_be_administered_by?(current_user)
+          if Seek::Config.email_enabled && !@project.can_manage?(current_user)
             ProjectChangedEmailJob.new(@project).queue_job
           end
           expire_resource_list_item_content
+          @project.reload
           flash[:notice] = "#{t('project')} was successfully updated."
           format.html { redirect_to(@project) }
           format.xml  { head :ok }
@@ -207,11 +217,6 @@ class ProjectsController < ApplicationController
           format.xml  { render xml: @project.errors, status: :unprocessable_entity }
           format.json { render json: json_api_errors(@project), status: :unprocessable_entity }
         end
-      end
-    rescue WorkGroupDeleteError => e
-      respond_to do |format|
-        flash[:error] = e.message
-        format.html { redirect_to(@project) }
       end
     end
   end
@@ -229,7 +234,7 @@ class ProjectsController < ApplicationController
     # listing institutions for a project is public data, but still
     # we require login to protect from unwanted requests
 
-    project_id = white_list(params[:id])
+    project_id = params[:id]
     institution_list = nil
 
     begin
@@ -318,7 +323,11 @@ class ProjectsController < ApplicationController
 
   def project_role_params
     params[:project].keys.each do |k|
-      params[:project][k] = params[:project][k].split(',')
+      unless params[:project][k].nil?
+        params[:project][k] = params[:project][k].split(',')
+      else
+        params[:project][k] = []
+      end
     end
 
     params.require(:project).permit({ project_administrator_ids: [] },
@@ -328,24 +337,21 @@ class ProjectsController < ApplicationController
   end
 
   def project_params
-    permitted_params = [:title, :web_page, :wiki_page, :description, :programme_id, { organism_ids: [] },
-                        { institution_ids: [] }, :default_license, :site_root_uri, :site_username, :site_password,
-                        :parent_id, :use_default_policy, :nels_enabled, :start_date, :end_date, :funding_codes]
+    permitted_params = [:title, :web_page, :wiki_page, :description, { organism_ids: [] }, :parent_id, :start_date,
+                        :end_date, :funding_codes]
 
-    if action_name == 'update'
-      restricted_params =
-        { site_root_uri: User.admin_logged_in?,
-          site_username: User.admin_logged_in?,
-          site_password: User.admin_logged_in?,
-          nels_enabled: User.admin_logged_in?,
-          institution_ids: (User.admin_logged_in? || @project.can_be_administered_by?(current_user)) }
-      restricted_params.each do |param, allowed|
-        permitted_params.delete(param) if params[:project] && !allowed
-      end
+    if User.admin_logged_in?
+      permitted_params += [:site_root_uri, :site_username, :site_password, :nels_enabled]
     end
 
-    if params[:project][:programme_id].present? && !Programme.find(params[:project][:programme_id]).can_manage?
-      permitted_params.delete(:programme_id)
+    if @project.new_record? || @project.can_manage?(current_user)
+      permitted_params += [:use_default_policy, :default_policy, :default_license,
+                           { members: [:person_id, :institution_id] }, { project_administrator_ids: [] },
+                           { asset_gatekeeper_ids: [] }, { asset_housekeeper_ids: [] }, { pal_ids: [] }]
+    end
+
+    if params[:project][:programme_id].present? && Programme.find_by_id(params[:project][:programme_id])&.can_manage?
+      permitted_params += [:programme_id]
     end
 
     params.require(:project).permit(permitted_params)
@@ -392,7 +398,7 @@ class ProjectsController < ApplicationController
 
   def editable_by_user
     @project = Project.find(params[:id])
-    unless User.admin_logged_in? || @project.can_be_edited_by?(current_user)
+    unless User.admin_logged_in? || @project.can_edit?(current_user)
       error('Insufficient privileges', 'is invalid (insufficient_privileges)', :forbidden)
       return false
     end
@@ -411,7 +417,7 @@ class ProjectsController < ApplicationController
 
   def administerable_by_user
     @project = Project.find(params[:id])
-    unless @project.can_be_administered_by?(current_user)
+    unless @project.can_manage?(current_user)
       error('Insufficient privileges', 'is invalid (insufficient_privileges)', :forbidden)
       return false
     end

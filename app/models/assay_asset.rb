@@ -1,6 +1,6 @@
-class AssayAsset < ActiveRecord::Base
+class AssayAsset < ApplicationRecord
   belongs_to :asset, polymorphic: true, inverse_of: :assay_assets
-  belongs_to :assay, inverse_of: :assay_assets
+  belongs_to :assay, inverse_of: :assay_assets, touch: true
 
   belongs_to :relationship_type
 
@@ -18,6 +18,8 @@ class AssayAsset < ActiveRecord::Base
 
   enforce_authorization_on_association :assay, :edit
   enforce_authorization_on_association :asset, :view
+
+  validate :validate_model_requires_modelling_assay
 
   def set_version
     return if destroyed?
@@ -39,4 +41,16 @@ class AssayAsset < ActiveRecord::Base
     OUTGOING = 2
     NODIRECTION = 0
   end
+
+  private
+
+  def validate_model_requires_modelling_assay
+    if asset && asset.is_a?(Model)
+      if assay && !assay.is_modelling?
+        errors.add(:assay, "must be a #{I18n.t('assays.modelling_analysis')}")
+      end
+    end
+  end
+
+
 end

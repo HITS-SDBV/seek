@@ -1,4 +1,4 @@
-class Study < ActiveRecord::Base
+class Study < ApplicationRecord
 
   include Seek::Rdf::RdfGeneration
   include Seek::ProjectHierarchies::ItemsProjectsExtension if Seek::Config.project_hierarchy_enabled
@@ -16,9 +16,6 @@ class Study < ActiveRecord::Base
   #FIXME: needs to be declared before acts_as_isa, else ProjectAssociation module gets pulled in
   acts_as_isa
   acts_as_snapshottable
-
-  attr_accessor :new_link_from_assay
-
 
   has_many :assays
   has_one :external_asset, as: :seek_entity, dependent: :destroy

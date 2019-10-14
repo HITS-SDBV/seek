@@ -16,14 +16,14 @@ function updateAttributionSettings() {
 
     // update the page
     if(html.length == 0) {
-        $j('#attributed_to_list').html('<li><span class="none_text">No attributions</span></li>');
+        $j('#attributed_to_list').html('<li class="association-list-item"><span class="none_text">No attributions</span></li>');
     }
     else {
         $j('#attributed_to_list').html(html);
     }
 
     // UPDATE THE FIELDS WHICH WILL BE SUBMITTED WITH THE PAGE
-    $j('#attributions').val(Object.toJSON(attributed_to_arr));
+    $j('#attributions').val(JSON.stringify(attributed_to_arr));
 
     $j('#attributed_to_list .delete').click(function () {
         var type = $j(this).data('objectType');

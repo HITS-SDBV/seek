@@ -5,11 +5,11 @@ class PublicationsController < ApplicationController
   include Seek::AssetsCommon
   include Seek::PreviewHandling
 
-  before_filter :publications_enabled?
+  before_action :publications_enabled?
 
-  before_filter :find_assets, only: [:index]
-  before_filter :find_and_authorize_requested_item, only: %i[show edit update destroy]
-  before_filter :suggest_authors, only: :edit
+  before_action :find_assets, only: [:index]
+  before_action :find_and_authorize_requested_item, only: %i[show edit update destroy]
+  before_action :suggest_authors, only: :edit
 
   include Seek::BreadCrumbs
 
@@ -126,33 +126,22 @@ class PublicationsController < ApplicationController
     protocol = params[:protocol]
     pubmed_id = nil
     doi = nil
-    if protocol == 'pubmed'
+    if protocol == 'pubmed' && key.present?
       pubmed_id = key
-    elsif protocol == 'doi'
+    elsif protocol == 'doi' && key.present?
       doi = key
     end
     pubmed_id, doi = preprocess_pubmed_or_doi pubmed_id, doi
     result = get_data(@publication, pubmed_id, doi)
     if !@error.nil?
-      if protocol == 'pubmed'
-        @error_text = @error
-      elsif protocol == 'doi'
-        if key.match(/[0-9]+(\.)[0-9]+.*/).nil?
-          @error_text = "Couldn't retrieve DOI: #{doi} - please ensure the DOI is entered in the correct format, e.g. 10.1093/nar/gkl320"
-        else
-          @error_text = "Couldn't retrieve DOI: #{doi} - #{@error}"
-        end
-      end
-      render :update do |page|
-        page[:publication_preview_container].hide
-        page[:publication_error].show
-        page[:publication_error].replace_html(render(partial: 'publications/publication_error', locals: { publication: @publication, error_text: @error_text }, status: 500))
+      @error_text = @error
+      respond_to do |format|
+        format.js { render status: 500 }
       end
     else
-      render :update do |page|
-        page[:publication_error].hide
-        page[:publication_preview_container].show
-        page[:publication_preview_container].replace_html(render(partial: 'publications/publication_preview', locals: { publication: @publication, authors: result.authors }))
+      @authors = result.authors
+      respond_to do |format|
+        format.js
       end
     end
   end
@@ -301,6 +290,8 @@ class PublicationsController < ApplicationController
         @error = 'There was an problem contacting the DOI query service. Please try again later'
         Seek::Errors::ExceptionForwarder.send_notification(exception, data:{ message: "Problem accessing crossref using DOI #{doi}" })
       end
+    else
+      @error = 'Please enter either a DOI or a PubMed ID for the publication.'
     end
     result
   end
@@ -510,7 +501,8 @@ class PublicationsController < ApplicationController
   end
 
   def preprocess_pubmed_or_doi(pubmed_id, doi)
-    doi = doi.sub(/doi\.*:/i, '').strip unless doi.nil?
+    doi = doi.sub(/doi\.*:/i, '').strip unless doi.nil? # handle DOI: prefix
+    doi = doi.gsub(/(https?:\/\/)?(dx\.)?doi\.org\//i,'').strip unless doi.nil? # handle https://doi.org/ prefix (with our without http(s))
     pubmed_id.strip! unless pubmed_id.nil? || pubmed_id.is_a?(Integer)
     [pubmed_id, doi]
   end

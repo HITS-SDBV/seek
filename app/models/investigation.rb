@@ -1,10 +1,8 @@
-class Investigation < ActiveRecord::Base
+class Investigation < ApplicationRecord
   include Seek::Rdf::RdfGeneration
 
   acts_as_isa
   acts_as_snapshottable
-
-  attr_accessor :new_link_from_study
 
   has_many :studies
 

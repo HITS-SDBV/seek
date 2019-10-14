@@ -55,7 +55,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     refute_nil proj
     assert_equal prog, proj.programme
     assert_no_difference('Programme.count') do
-      delete :destroy, id: prog.id
+      delete :destroy, params: { id: prog.id }
     end
     refute_nil flash[:error]
     assert_redirected_to prog
@@ -71,7 +71,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     refute_empty programme.projects
 
     assert_no_difference('Programme.count') do
-      delete :destroy, id: programme.id
+      delete :destroy, params: { id: programme.id }
     end
     refute_nil flash[:error]
 
@@ -79,7 +79,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     programme.save!
 
     assert_difference('Programme.count', -1) do
-      delete :destroy, id: programme.id
+      delete :destroy, params: { id: programme.id }
     end
     assert_redirected_to programmes_path
   end
@@ -89,7 +89,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     prog = Factory(:programme, projects:[])
     assert prog.can_delete?
     assert_difference('Programme.count', -1) do
-      delete :destroy, id: prog.id
+      delete :destroy, params: { id: prog.id }
     end
     assert_redirected_to programmes_path
 
@@ -98,7 +98,7 @@ class ProgrammesControllerTest < ActionController::TestCase
   test 'admin can update' do
     login_as(Factory(:admin))
     prog = Factory(:programme, description: 'ggggg')
-    put :update, id: prog, programme: { title: 'fish' }
+    put :update, params: { id: prog, programme: { title: 'fish' } }
     prog = assigns(:programme)
     refute_nil prog
     assert_redirected_to prog
@@ -112,7 +112,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     prog = Factory(:programme, description: 'ggggg')
     person.is_programme_administrator = true, prog
     disable_authorization_checks { person.save! }
-    put :update, id: prog, programme: { title: 'fish' }
+    put :update, params: { id: prog, programme: { title: 'fish' } }
     prog = assigns(:programme)
     refute_nil prog
     assert_redirected_to prog
@@ -123,7 +123,7 @@ class ProgrammesControllerTest < ActionController::TestCase
   test 'normal user cannot update' do
     login_as(Factory(:person))
     prog = Factory(:programme, description: 'ggggg', title: 'eeeee')
-    put :update, id: prog, programme: { title: 'fish' }
+    put :update, params: { id: prog, programme: { title: 'fish' } }
     assert_redirected_to prog
     assert_equal 'eeeee', prog.title
     assert_equal 'ggggg', prog.description
@@ -136,7 +136,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     refute person.is_programme_administrator_of_any_programme?
     assert_difference('Programme.count', 1) do
       assert_difference('AdminDefinedRoleProgramme.count', 1) do
-        post :create, programme: { administrator_ids: "#{person.id}", title: 'programme xxxyxxx2' }
+        post :create, params: { programme: { administrator_ids: "#{person.id}", title: 'programme xxxyxxx2' } }
       end
     end
 
@@ -154,7 +154,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     refute admin.is_programme_administrator_of_any_programme?
     assert_difference('Programme.count', 1) do
       assert_difference('AdminDefinedRoleProgramme.count', 1) do
-        post :create, programme: { administrator_ids: "#{admin.id}", title: 'programme xxxyxxx1' }
+        post :create, params: { programme: { administrator_ids: "#{admin.id}", title: 'programme xxxyxxx1' } }
       end
     end
 
@@ -181,7 +181,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     refute p3.is_programme_administrator?(prog)
 
     ids = [p1.id, p2.id].join(',')
-    put :update, id: prog, programme: { administrator_ids: ids }
+    put :update, params: { id: prog, programme: { administrator_ids: ids } }
 
     assert_redirected_to prog
 
@@ -216,7 +216,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     refute p3.is_programme_administrator?(prog)
 
     ids = [p1.id, p2.id].join(',')
-    put :update, id: prog, programme: { administrator_ids: ids }
+    put :update, params: { id: prog, programme: { administrator_ids: ids } }
 
     assert_redirected_to prog
 
@@ -235,14 +235,14 @@ class ProgrammesControllerTest < ActionController::TestCase
     login_as(Factory(:admin))
     p = Factory(:programme)
     Factory(:avatar, owner: p)
-    get :edit, id: p
+    get :edit, params: { id: p }
     assert_response :success
   end
 
   test 'edit page not accessible to user' do
     login_as(Factory(:person))
     p = Factory(:programme)
-    get :edit, id: p
+    get :edit, params: { id: p }
     assert_redirected_to p
     refute_nil flash[:error]
   end
@@ -253,7 +253,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     p = Factory(:programme)
     person.is_programme_administrator = true, p
     disable_authorization_checks { person.save! }
-    get :edit, id: p
+    get :edit, params: { id: p }
     assert_response :success
   end
 
@@ -333,7 +333,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     p.avatar = avatar
     disable_authorization_checks { p.save! }
 
-    get :show, id: p
+    get :show, params: { id: p }
     assert_response :success
   end
 
@@ -343,7 +343,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     p.avatar = avatar
     disable_authorization_checks { p.save! }
     login_as(Factory(:admin))
-    put :update, id: p, programme: { avatar_id: '0' }
+    put :update, params: { id: p, programme: { avatar_id: '0' } }
     prog = assigns(:programme)
     refute_nil prog
     assert_nil prog.avatar
@@ -352,84 +352,9 @@ class ProgrammesControllerTest < ActionController::TestCase
   test 'can be disabled' do
     p = Factory(:programme, projects: [Factory(:project), Factory(:project)])
     with_config_value :programmes_enabled, false do
-      get :show, id: p
+      get :show, params: { id: p }
       assert_redirected_to :root
       refute_nil flash[:error]
-    end
-  end
-
-  test 'non admin cannot spawn' do
-    login_as(Factory(:person))
-    prog = Factory(:programme)
-    get :initiate_spawn_project, id: prog
-    assert_redirected_to :root
-    refute_nil flash[:error]
-  end
-
-  test 'initiate_spawn_project' do
-    login_as(Factory(:admin))
-    prog = Factory(:programme)
-    proj1 = Factory(:project, programme: prog)
-    proj2 = Factory(:project, programme: nil)
-    proj3 = Factory(:project, programme: Factory(:programme))
-    get :initiate_spawn_project, id: prog
-    assert_response :success
-    assigned_prog = assigns(:programme)
-    projects = assigns(:available_projects)
-    assert_equal prog, assigned_prog
-    refute_includes projects, proj1
-    assert_includes projects, proj2
-    assert_includes projects, proj3
-  end
-
-  test 'spawn project' do
-    proj = Factory(:project)
-    prog = Factory(:programme)
-    login_as(Factory(:admin))
-    assert_difference('Project.count', 1) do
-      post :spawn_project, id: prog.id, project: { title: 'cheese', description: 'mmmmmm', web_page: 'http://google.com', ancestor_id: proj.id }
-    end
-    new_proj = assigns(:project)
-    refute_nil new_proj
-
-    assert_redirected_to project_path(new_proj)
-    assert_equal prog, new_proj.programme
-    assert_equal 'cheese', new_proj.title
-    assert_equal 'mmmmmm', new_proj.description
-    assert_equal 'http://google.com', new_proj.web_page
-
-    refute_nil flash[:notice]
-
-    ancestor = assigns(:ancestor_project)
-    assert_equal proj, ancestor
-  end
-
-  test 'non admin cannot spawn project' do
-    proj = Factory(:project)
-    prog = Factory(:programme)
-    login_as(Factory(:person))
-    assert_no_difference('Project.count') do
-      post :spawn_project, id: prog.id, project: { title: 'cheese', description: 'mmmmmm', web_page: 'http://google.com', ancestor_id: proj.id }
-    end
-    assert_redirected_to :root
-    refute_nil flash[:error]
-  end
-
-  test 'spawn project failed' do
-    proj = Factory(:project)
-    prog = Factory(:programme)
-    login_as(Factory(:admin))
-    # invalid title
-    assert_no_difference('Project.count') do
-      post :spawn_project, id: prog.id, project: { title: '', description: 'mmmmmm', web_page: 'http://google.com', ancestor_id: proj.id }
-    end
-    new_proj = assigns(:project)
-    refute new_proj.valid?
-    assert_response :success
-    ancestor = assigns(:ancestor_project)
-    assert_equal proj, ancestor
-    assert_select '#errorExplanation' do
-      assert_select 'li', text: /Title can.*t be blank/, count: 1
     end
   end
 
@@ -438,7 +363,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     login_as(p)
     assert_difference('Programme.count') do
       assert_difference("Delayed::Job.where(\"handler LIKE '%Delayed::PerformableMailer%'\").count", 1) do # activation email
-        post :create, programme: { title: 'A programme', funding_codes: 'aaa,bbb', web_page: '', description: '', funding_details: '' }
+        post :create, params: { programme: { title: 'A programme', funding_codes: 'aaa,bbb', web_page: '', description: '', funding_details: '' } }
       end
     end
     prog = assigns(:programme)
@@ -456,7 +381,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     login_as(p)
     assert_difference('Programme.count') do
       assert_no_difference("Delayed::Job.where(\"handler LIKE '%Delayed::PerformableMailer%'\").count") do # no email for admin creation
-        post :create, programme: { title: 'A programme' }
+        post :create, params: { programme: { title: 'A programme' } }
       end
     end
     prog = assigns(:programme)
@@ -467,7 +392,7 @@ class ProgrammesControllerTest < ActionController::TestCase
 
   test 'logged out user cannot create' do
     assert_no_difference('Programme.count') do
-      post :create, programme: { title: 'A programme' }
+      post :create, params: { programme: { title: 'A programme' } }
     end
     assert_redirected_to :root
   end
@@ -478,7 +403,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     disable_authorization_checks { programme.save! }
     refute programme.is_activated?
     login_as(Factory(:admin))
-    get :activation_review, id: programme
+    get :activation_review, params: { id: programme }
     assert_response :success
     assert_nil flash[:error]
   end
@@ -490,7 +415,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     disable_authorization_checks { programme.save! }
     refute programme.is_activated?
     login_as(person)
-    get :activation_review, id: programme
+    get :activation_review, params: { id: programme }
     assert_redirected_to :root
     refute_nil flash[:error]
   end
@@ -500,7 +425,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     login_as(Factory(:admin))
     programme.activate
     assert programme.is_activated?
-    get :activation_review, id: programme
+    get :activation_review, params: { id: programme }
     assert_redirected_to :root
     refute_nil flash[:error]
   end
@@ -514,7 +439,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     login_as(Factory(:admin))
 
     assert_difference("Delayed::Job.where(\"handler LIKE '%Delayed::PerformableMailer%'\").count", 1) do
-      put :accept_activation, id: programme
+      put :accept_activation, params: { id: programme }
     end
 
     assert_redirected_to programme
@@ -533,7 +458,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     login_as(programme_administrator)
 
     assert_no_difference("Delayed::Job.where(\"handler LIKE '%Delayed::PerformableMailer%'\").count") do
-      put :accept_activation, id: programme
+      put :accept_activation, params: { id: programme }
     end
 
     assert_redirected_to :root
@@ -551,7 +476,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     login_as(Factory(:admin))
 
     assert_no_difference("Delayed::Job.where(\"handler LIKE '%Delayed::PerformableMailer%'\").count") do
-      put :accept_activation, id: programme
+      put :accept_activation, params: { id: programme }
     end
 
     assert_redirected_to :root
@@ -569,7 +494,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     refute programme.is_activated?
     login_as(Factory(:admin))
 
-    get :reject_activation_confirmation, id: programme
+    get :reject_activation_confirmation, params: { id: programme }
     assert_response :success
     assert assigns(:programme)
   end
@@ -581,7 +506,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     assert programme.is_activated?
     login_as(Factory(:admin))
 
-    get :reject_activation_confirmation, id: programme
+    get :reject_activation_confirmation, params: { id: programme }
     assert_redirected_to :root
     assert_nil flash[:notice]
     refute_nil flash[:error]
@@ -595,7 +520,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     refute programme.is_activated?
     login_as(programme_administrator)
 
-    get :reject_activation_confirmation, id: programme
+    get :reject_activation_confirmation, params: { id: programme }
     assert_redirected_to :root
     assert_nil flash[:notice]
     refute_nil flash[:error]
@@ -610,7 +535,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     login_as(Factory(:admin))
 
     assert_difference("Delayed::Job.where(\"handler LIKE '%Delayed::PerformableMailer%'\").count", 1) do
-      put :reject_activation, id: programme, programme: { activation_rejection_reason: 'rejection reason' }
+      put :reject_activation, params: { id: programme, programme: { activation_rejection_reason: 'rejection reason' } }
     end
 
     assert_redirected_to programme
@@ -630,7 +555,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     login_as(programme_administrator)
 
     assert_no_difference("Delayed::Job.where(\"handler LIKE '%Delayed::PerformableMailer%'\").count") do
-      put :reject_activation, id: programme, programme: { activation_rejection_reason: 'rejection reason' }
+      put :reject_activation, params: { id: programme, programme: { activation_rejection_reason: 'rejection reason' } }
     end
 
     assert_redirected_to :root
@@ -649,7 +574,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     login_as(Factory(:admin))
 
     assert_no_difference("Delayed::Job.where(\"handler LIKE '%Delayed::PerformableMailer%'\").count") do
-      put :reject_activation, id: programme, programme: { activation_rejection_reason: 'rejection reason' }
+      put :reject_activation, params: { id: programme, programme: { activation_rejection_reason: 'rejection reason' } }
     end
 
     assert_redirected_to :root
@@ -667,27 +592,27 @@ class ProgrammesControllerTest < ActionController::TestCase
     disable_authorization_checks { programme.save! }
     refute programme.is_activated?
 
-    get :show, id: programme
+    get :show, params: { id: programme }
     assert_redirected_to :root
     refute_nil flash[:error]
-    flash[:error] = nil
+    clear_flash(:error)
 
     login_as(programme_administrator)
-    get :show, id: programme
+    get :show, params: { id: programme }
     assert_response :success
     assert_nil flash[:error]
     logout
-    flash[:error] = nil
+    clear_flash(:error)
 
     login_as(Factory(:admin))
-    get :show, id: programme
+    get :show, params: { id: programme }
     assert_response :success
     assert_nil flash[:error]
     logout
-    flash[:error] = nil
+    clear_flash(:error)
 
     login_as(Factory(:person))
-    get :show, id: programme
+    get :show, params: { id: programme }
     assert_redirected_to :root
     refute_nil flash[:error]
   end
@@ -735,14 +660,14 @@ class ProgrammesControllerTest < ActionController::TestCase
     assert_redirected_to :root
     refute_nil flash[:error]
     logout
-    flash[:error] = nil
+    clear_flash(:error)
 
     login_as(normal)
     get :awaiting_activation
     assert_redirected_to :root
     refute_nil flash[:error]
     logout
-    flash[:error] = nil
+    clear_flash(:error)
   end
 
   test 'can get storage usage' do
@@ -753,7 +678,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     assert size > 0
 
     login_as(programme_administrator)
-    get :storage_report, id: programme.id
+    get :storage_report, params: { id: programme.id }
 
     assert_response :success
     assert_nil flash[:error]
@@ -766,7 +691,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     programme = programme_administrator.programmes.first
 
     login_as(normal)
-    get :storage_report, id: programme.id
+    get :storage_report, params: { id: programme.id }
     assert_redirected_to programme_path(programme)
     refute_nil flash[:error]
   end
@@ -776,7 +701,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     prog = Factory(:programme)
 
     assert_difference('Annotation.count', 2) do
-      put :update, id: prog, programme: { funding_codes: '1234,abcd' }
+      put :update, params: { id: prog, programme: { funding_codes: '1234,abcd' } }
     end
 
     assert_redirected_to prog
@@ -786,7 +711,7 @@ class ProgrammesControllerTest < ActionController::TestCase
     assert_includes assigns(:programme).funding_codes, 'abcd'
 
     assert_difference('Annotation.count', -2) do
-      put :update, id: prog, programme: { funding_codes: '' }
+      put :update, params: { id: prog, programme: { funding_codes: '' } }
     end
 
     assert_redirected_to prog

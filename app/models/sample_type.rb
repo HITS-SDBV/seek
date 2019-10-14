@@ -1,4 +1,4 @@
-class SampleType < ActiveRecord::Base
+class SampleType < ApplicationRecord
   # attr_accessible :title, :uuid, :sample_attributes_attributes,
  #                 :description, :uploaded_template, :project_ids, :tags
 
@@ -93,7 +93,7 @@ class SampleType < ActiveRecord::Base
   def can_edit?(user = User.current_user)
     return false if user.nil? || user.person.nil? || !Seek::Config.samples_enabled
     return true if user.is_admin?
-    contributor == user.person || projects.detect { |project| project.can_be_administered_by?(user)}.present?
+    contributor == user.person || projects.detect { |project| project.can_manage?(user)}.present?
   end
 
   def can_delete?(user = User.current_user)

@@ -10,21 +10,20 @@ class DataFilesController < ApplicationController
 
   include Seek::AssetsCommon
 
-  before_filter :find_assets, only: [:index]
-  before_filter :find_and_authorize_requested_item, except: [:index, :new, :upload_for_tool, :upload_from_email, :create, :create_content_blob,
+  before_action :find_assets, only: [:index]
+  before_action :find_and_authorize_requested_item, except: [:index, :new, :upload_for_tool, :upload_from_email, :create, :create_content_blob,
                                                              :request_resource, :preview, :test_asset_url, :update_annotations_ajax, :rightfield_extraction_ajax, :provide_metadata]
-  before_filter :find_display_asset, only: [:show, :explore, :download]
-  skip_before_filter :verify_authenticity_token, only: [:upload_for_tool, :upload_from_email]
-  before_filter :xml_login_only, only: [:upload_for_tool, :upload_from_email]
-  before_filter :get_sample_type, only: :extract_samples
-  before_filter :check_already_extracted, only: :extract_samples
-  before_filter :forbid_new_version_if_samples, :only => :new_version
+  before_action :find_display_asset, only: [:show, :explore, :download]
+  before_action :xml_login_only, only: [:upload_for_tool, :upload_from_email]
+  before_action :get_sample_type, only: :extract_samples
+  before_action :check_already_extracted, only: :extract_samples
+  before_action :forbid_new_version_if_samples, :only => :new_version
 
-  before_filter :oauth_client, only: :retrieve_nels_sample_metadata
-  before_filter :nels_oauth_session, only: :retrieve_nels_sample_metadata
-  before_filter :rest_client, only: :retrieve_nels_sample_metadata
+  before_action :oauth_client, only: :retrieve_nels_sample_metadata
+  before_action :nels_oauth_session, only: :retrieve_nels_sample_metadata
+  before_action :rest_client, only: :retrieve_nels_sample_metadata
 
-  before_filter :login_required, only: [:create, :create_content_blob, :create_metadata, :rightfield_extraction_ajax, :provide_metadata]
+  before_action :login_required, only: [:create, :create_content_blob, :create_metadata, :rightfield_extraction_ajax, :provide_metadata]
 
   # has to come after the other filters
   include Seek::Publishing::PublishingCommon
@@ -147,10 +146,10 @@ class DataFilesController < ApplicationController
         Mailer.file_uploaded(current_user, Person.find(params[:recipient_id]), @data_file).deliver_later
 
         flash.now[:notice] = "#{t('data_file')} was successfully uploaded and saved." if flash.now[:notice].nil?
-        render text: flash.now[:notice]
+        render plain: flash.now[:notice]
       else
         errors = (@data_file.errors.map { |e| e.join(' ') }.join("\n"))
-        render text: errors, status: 500
+        render plain: errors, status: 500
       end
     end
   end
@@ -165,15 +164,15 @@ class DataFilesController < ApplicationController
           if @data_file.save
             @data_file.creators = [User.current_user.person]
             flash.now[:notice] = "#{t('data_file')} was successfully uploaded and saved." if flash.now[:notice].nil?
-            render text: flash.now[:notice]
+            render plain: flash.now[:notice]
           else
             errors = (@data_file.errors.map { |e| e.join(' ') }.join("\n"))
-            render text: errors, status: 500
+            render plain: errors, status: 500
           end
         end
       end
     else
-      render text: 'This user is not permitted to act on behalf of other users', status: :forbidden
+      render plain: 'This user is not permitted to act on behalf of other users', status: :forbidden
     end
   end
 
@@ -270,7 +269,7 @@ class DataFilesController < ApplicationController
     scope = scope.with_extracted_samples if (params[:with_samples] == 'true')
 
     @data_files = DataFile.authorize_asset_collection(
-      scope.where('data_files.title LIKE ?', "%#{params[:filter]}%").uniq, 'view'
+      scope.where('data_files.title LIKE ?', "%#{params[:filter]}%").distinct, 'view'
     ).first(20)
 
     respond_to do |format|
@@ -383,12 +382,10 @@ class DataFilesController < ApplicationController
   # handles the uploading of the file to create a content blob, which is then associated with a new unsaved datafile
   # and stored on the session
   def create_content_blob
-    @data_file = DataFile.new
+    @data_file = setup_new_asset
     respond_to do |format|
       if handle_upload_data && @data_file.content_blob.save
         session[:uploaded_content_blob_id] = @data_file.content_blob.id
-        # assay ids passed forwards, e.g from "Add Datafile" button
-        @source_assay_ids = (params[:assay_ids] || [] ).reject(&:blank?)
         format.html {}
       else
         session.delete(:uploaded_content_blob_id)
@@ -400,14 +397,14 @@ class DataFilesController < ApplicationController
   # AJAX call to trigger any RightField extraction (if appropriate), and pre-populates the associated @data_file and
   # @assay
   def rightfield_extraction_ajax
-    @data_file = DataFile.new
+    @data_file = setup_new_asset
     @assay = Assay.new
     @warnings = nil
     critical_error_msg = nil
     session.delete :extraction_exception_message
 
     begin
-      if params[:content_blob_id] == session[:uploaded_content_blob_id].to_s
+      if params[:content_blob_id].to_s == session[:uploaded_content_blob_id].to_s
         @data_file.content_blob = ContentBlob.find_by_id(params[:content_blob_id])
         @warnings = @data_file.populate_metadata_from_template
         @assay, warnings = @data_file.initialise_assay_from_template
@@ -426,9 +423,9 @@ class DataFilesController < ApplicationController
 
     respond_to do |format|
       if critical_error_msg
-        format.js { render text: critical_error_msg, status: :unprocessable_entity }
+        format.js { render plain: critical_error_msg, status: :unprocessable_entity }
       else
-        format.js { render text: 'done', status: :ok }
+        format.js { render plain: 'done', status: :ok }
       end
     end
   end
@@ -439,7 +436,7 @@ class DataFilesController < ApplicationController
     @data_file ||= session[:processed_datafile]
     @assay ||= session[:processed_assay]
 
-    #this peculiar line avoids a no method error when calling super later on, when there are no assays in the database
+    # this peculiar line avoids a no method error when calling super later on, when there are no assays in the database
     # this I believe is caused by accessing the unmarshalled @assay before the Assay class has been encountered. Adding this line
     # avoids the error
     Assay.new
@@ -447,14 +444,6 @@ class DataFilesController < ApplicationController
     @exception_message ||= session[:extraction_exception_message]
     @create_new_assay = @assay && @assay.new_record? && !@assay.title.blank?
     @data_file.assay_assets.build(assay_id: @assay.id) if @assay.persisted?
-
-    # associate any assays passed through with :assay_ids param
-    if params[:assay_ids]
-      assays = Assay.authorize_asset_collection(Assay.find(params[:assay_ids]),:edit)
-      assays.each do |assay|
-        @data_file.assay_assets.build(assay_id: assay.id)
-      end
-    end
 
     respond_to do |format|
       format.html
@@ -513,7 +502,7 @@ class DataFilesController < ApplicationController
       end
 
     else
-      @data_file.errors[:base] = "The file uploaded doesn't match" unless uploaded_blob_matches
+      @data_file.errors.add(:base, "The file uploaded doesn't match") unless uploaded_blob_matches
 
       # this helps trigger the complete validation error messages, as not both may be validated in a single action
       # - want the avoid the user fixing one set of validation only to be presented with a new set
@@ -629,8 +618,8 @@ end
   private
 
   def data_file_params
-    params.require(:data_file).permit(:title, :description, :simulation_data, { project_ids: [] }, :license, :other_creators,
-                                      :parent_name, { event_ids: [] },
+    params.require(:data_file).permit(:title, :description, :simulation_data, { project_ids: [] },
+                                      :license, :other_creators,{ event_ids: [] },
                                       { special_auth_codes_attributes: [:code, :expiration_date, :id, :_destroy] },
                                       { creator_ids: [] }, { assay_assets_attributes: [:assay_id, :relationship_type_id] },
                                       { scales: [] }, { publication_ids: [] })

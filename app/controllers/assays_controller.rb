@@ -3,14 +3,14 @@ class AssaysController < ApplicationController
   include Seek::IndexPager
   include Seek::AssetsCommon
 
-  before_filter :assays_enabled?
+  before_action :assays_enabled?
 
-  before_filter :find_assets, :only=>[:index]
-  before_filter :find_and_authorize_requested_item, :only=>[:edit, :update, :destroy, :show,:new_object_based_on_existing_one]
+  before_action :find_assets, :only=>[:index]
+  before_action :find_and_authorize_requested_item, :only=>[:edit, :update, :destroy, :manage, :manage_update, :show, :new_object_based_on_existing_one]
 
   #project_membership_required_appended is an alias to project_membership_required, but is necessary to include the actions
   #defined in the application controller
-  before_filter :project_membership_required_appended, :only=>[:new_object_based_on_existing_one]
+  before_action :project_membership_required_appended, :only=>[:new_object_based_on_existing_one]
 
   include Seek::Publishing::PublishingCommon
 
@@ -68,11 +68,9 @@ class AssaysController < ApplicationController
    end
 
   def new
-    @assay=Assay.new
-    @assay.create_from_asset = params[:create_from_asset]
-    study = Study.find(params[:study_id]) if params[:study_id]
-    @assay.study = study if params[:study_id] if study.try :can_edit?
+    @assay=setup_new_asset
     @assay_class=params[:class]
+    @permitted_params = assay_params if params[:assay]
 
     #jump straight to experimental if modelling analysis is disabled
     @assay_class ||= "experimental" unless Seek::Config.modelling_analysis_enabled
@@ -116,14 +114,10 @@ class AssaysController < ApplicationController
     update_relationships(@assay, params)
 
     if @assay.save
-      if @assay.create_from_asset =="true"
-        render :action => :update_assays_list
-      else
-        respond_to do |format|
-          flash[:notice] = "#{t('assays.assay')} was successfully created."
-          format.html { redirect_to(@assay) }
-          format.json {render json: @assay}
-        end
+      respond_to do |format|
+        flash[:notice] = "#{t('assays.assay')} was successfully created."
+        format.html { redirect_to(@assay) }
+        format.json {render json: @assay}
       end
     else
       respond_to do |format|
@@ -153,8 +147,9 @@ class AssaysController < ApplicationController
 
   def update_assay_organisms assay,params
     organisms             = params[:assay_organism_ids] || params[:assay][:organism_ids] || []
-    assay.assay_organisms = []
+    assay.assay_organisms = [] # This means new AssayOrganisms are created every time the assay is updated!
     Array(organisms).each do |text|
+      # TODO: Refactor this to use proper nested params:
       o_id, strain,strain_id,culture_growth_type_text,t_id,t_title=text.split(",")
       culture_growth=CultureGrowthType.find_by_title(culture_growth_type_text)
       assay.associate_organism(o_id, strain_id, culture_growth,t_id,t_title)
@@ -171,17 +166,11 @@ class AssaysController < ApplicationController
     end
   end
 
-  def update_types
-    render :update do |page|
-      page.replace_html "favourite_list", :partial=>"favourites/gadget_list"
-    end
-  end
-
   private
 
   def assay_params
     params.require(:assay).permit(:title, :description, :study_id, :assay_class_id, :assay_type_uri, :technology_type_uri,
-                                  :license, :other_creators, :create_from_asset, { document_ids: []}, { creator_ids: [] },
+                                  :license, :other_creators, { document_ids: []}, { creator_ids: [] },
                                   { scales: [] }, { sop_ids: [] }, { model_ids: [] },
                                   { samples_attributes: [:asset_id, :direction] },
                                   { data_files_attributes: [:asset_id, :direction, :relationship_type_id] },

@@ -25,6 +25,22 @@ class UsersControllerTest < ActionController::TestCase
     assert_nil session[:user_id]
   end
 
+  test 'whoami_no_login' do
+    get :whoami, format: :json
+    assert_response :not_found
+  end
+
+  test 'whoami_login' do
+    person = Factory :person
+
+    login_as person.user
+
+    get :whoami, format: :json
+    assert_response :redirect
+    assert_redirected_to person_path(person)
+
+  end
+
   test 'cancel registration doesnt destroy user with profile' do
     person = Factory :person
 
@@ -48,13 +64,13 @@ class UsersControllerTest < ActionController::TestCase
     user = Factory :user
     login_as user
     assert_difference('User.count', 0) do
-      delete :destroy, id: user_without_profile
+      delete :destroy, params: { id: user_without_profile }
     end
     logout
     admin = Factory(:user, person_id: Factory(:admin).id)
     login_as admin
     assert_difference('User.count', -1) do
-      delete :destroy, id: user_without_profile
+      delete :destroy, params: { id: user_without_profile }
     end
   end
 
@@ -63,7 +79,7 @@ class UsersControllerTest < ActionController::TestCase
     admin = Factory(:user, person_id: Factory(:admin).id)
     login_as admin
     assert_no_difference('User.count') do
-      delete :destroy, id: person.user
+      delete :destroy, params: { id: person.user }
     end
   end
 
@@ -71,13 +87,13 @@ class UsersControllerTest < ActionController::TestCase
     user = Factory :brand_new_user, person_id: Factory(:person).id
     assert !user.active?
     login_as Factory(:user)
-    post :resend_activation_email, id: user
+    post :resend_activation_email, params: { id: user }
     assert_not_nil flash[:error]
     flash.clear
     logout
     admin = Factory(:user, person_id: Factory(:admin).id)
     login_as admin
-    post :resend_activation_email, id: user
+    post :resend_activation_email, params: { id: user }
     assert_nil flash[:error]
   end
 
@@ -87,12 +103,12 @@ class UsersControllerTest < ActionController::TestCase
     admin = Factory(:user, person_id: Factory(:admin).id)
     login_as admin
     assert_difference('User.count', -1) do
-      post :bulk_destroy, ids: [user1.id]
+      post :bulk_destroy, params: { ids: [user1.id] }
     end
 
     logout
     assert_difference('User.count', 0) do
-      post :bulk_destroy, ids: [user2.id]
+      post :bulk_destroy, params: { ids: [user2.id] }
     end
     assert_redirected_to :root
     assert_not_nil flash[:error]
@@ -109,7 +125,7 @@ class UsersControllerTest < ActionController::TestCase
     # destroy also dependencies
     assert_difference('User.count', -2) do
       assert_difference('FavouriteGroup.count', -2) do
-        post :bulk_destroy, ids: [user1.id, user2.id]
+        post :bulk_destroy, params: { ids: [user1.id, user2.id] }
       end
     end
   end
@@ -125,7 +141,7 @@ class UsersControllerTest < ActionController::TestCase
     # destroy also dependencies
     assert_difference('User.count', -1) do
       assert_difference('FavouriteGroup.count', -1) do
-        post :bulk_destroy, ids: [user1.id]
+        post :bulk_destroy, params: { ids: [user1.id] }
       end
     end
   end
@@ -151,28 +167,28 @@ class UsersControllerTest < ActionController::TestCase
   def test_should_require_login_on_signup
     assert_no_difference 'User.count' do
       create_user(login: nil)
-      assert assigns(:user).errors.get(:login)
+      assert assigns(:user).errors[:login]
     end
   end
 
   def test_should_require_password_on_signup
     assert_no_difference 'User.count' do
       create_user(password: nil)
-      assert assigns(:user).errors.get(:password)
+      assert assigns(:user).errors[:password]
     end
   end
 
   def test_should_require_password_confirmation_on_signup
     assert_no_difference 'User.count' do
       create_user(password_confirmation: nil)
-      assert assigns(:user).errors.get(:password_confirmation)
+      assert assigns(:user).errors[:password_confirmation]
     end
   end
 
   def test_should_activate_user
     user = Factory(:person, user: Factory(:brand_new_user)).user
     refute user.active?
-    get :activate, activation_code: user.activation_code
+    get :activate, params: { activation_code: user.activation_code }
     assert_redirected_to person_path(user.person)
     refute_nil flash[:notice]
     assert User.find(user.id).active?
@@ -184,13 +200,13 @@ class UsersControllerTest < ActionController::TestCase
   end
 
   def test_should_not_activate_user_with_blank_key
-    get :activate, activation_code: ''
+    get :activate, params: { activation_code: '' }
     assert_nil flash[:notice]
   end
 
   def test_can_edit_self
     login_as :quentin
-    get :edit, id: users(:quentin)
+    get :edit, params: { id: users(:quentin) }
     assert_response :success
     # TODO: is there a better way to test the layout used?
     assert_select '#navbar' # check its using the right layout
@@ -198,7 +214,7 @@ class UsersControllerTest < ActionController::TestCase
 
   def test_cant_edit_some_else
     login_as :quentin
-    get :edit, id: users(:aaron)
+    get :edit, params: { id: users(:aaron) }
     assert_redirected_to root_url
   end
 
@@ -207,7 +223,7 @@ class UsersControllerTest < ActionController::TestCase
     login_as u
     assert_nil u.person
     p = Factory(:brand_new_person)
-    post :update, id: u.id, user: { id: u.id, person_id: p.id, email: p.email }
+    post :update, params: { id: u.id, user: { id: u.id, person_id: p.id, email: p.email } }
     assert_nil flash[:error]
     assert_equal p, User.find(u.id).person
   end
@@ -216,7 +232,7 @@ class UsersControllerTest < ActionController::TestCase
     login_as :quentin
     u = users(:quentin)
     pwd = 'b' * User::MIN_PASSWORD_LENGTH
-    post :update, id: u.id, user: { id: u.id, password: pwd, password_confirmation: pwd }
+    post :update, params: { id: u.id, user: { id: u.id, password: pwd, password_confirmation: pwd } }
     assert_nil flash[:error]
     assert User.authenticate('quentin', pwd)
   end
@@ -227,7 +243,7 @@ class UsersControllerTest < ActionController::TestCase
     user.save!
     login_as(user)
     pwd = 'a' * User::MIN_PASSWORD_LENGTH
-    post :update, id: user.id, user: { id: user.id, password: pwd, password_confirmation: pwd }
+    post :update, params: { id: user.id, user: { id: user.id, password: pwd, password_confirmation: pwd } }
     user.reload
     assert_nil user.reset_password_code
     assert_nil user.reset_password_code_until
@@ -237,7 +253,7 @@ class UsersControllerTest < ActionController::TestCase
     login_as :quentin
     assert User.current_user, users(:quentin)
 
-    get :impersonate, id: users(:aaron)
+    get :impersonate, params: { id: users(:aaron) }
 
     assert_redirected_to root_path
     assert User.current_user, users(:aaron)
@@ -247,7 +263,7 @@ class UsersControllerTest < ActionController::TestCase
     login_as :quentin
     assert User.current_user, users(:quentin)
 
-    get :impersonate, id: (User.last.id + 1)
+    get :impersonate, params: { id: (User.last.id + 1) }
 
     assert_redirected_to admin_path
     assert User.current_user, users(:quentin)
@@ -258,7 +274,7 @@ class UsersControllerTest < ActionController::TestCase
     login_as :aaron
     assert User.current_user, users(:aaron)
 
-    get :impersonate, id: users(:quentin)
+    get :impersonate, params: { id: users(:quentin) }
 
     assert flash[:error]
     assert User.current_user, users(:aaron)
@@ -266,7 +282,7 @@ class UsersControllerTest < ActionController::TestCase
 
   test 'should handle no current_user when edit user' do
     logout
-    get :edit, id: users(:aaron), user: {}
+    get :edit, params: { id: users(:aaron), user: {} }
     assert_redirected_to :root
     assert_not_nil flash[:error]
   end
@@ -277,14 +293,14 @@ class UsersControllerTest < ActionController::TestCase
     user.save!
     refute_nil(user.reset_password_code)
     refute_nil(user.reset_password_code_until)
-    get :reset_password, reset_code: user.reset_password_code
+    get :reset_password, params: { reset_code: user.reset_password_code }
     assert_redirected_to edit_user_path(user)
     assert_equal 'You can change your password here', flash[:notice]
     assert_nil flash[:error]
   end
 
   test 'reset password with invalid code' do
-    get :reset_password, reset_code: 'xxx'
+    get :reset_password, params: { reset_code: 'xxx' }
     assert_redirected_to root_path
     assert_nil flash[:notice]
     refute_nil flash[:error]
@@ -304,7 +320,7 @@ class UsersControllerTest < ActionController::TestCase
     user.reset_password
     user.reset_password_code_until = 5.days.ago
     user.save!
-    get :reset_password, reset_code: user.reset_password_code
+    get :reset_password, params: { reset_code: user.reset_password_code }
     assert_redirected_to root_path
     assert_nil flash[:notice]
     refute_nil flash[:error]
@@ -350,7 +366,7 @@ class UsersControllerTest < ActionController::TestCase
 
   def create_user(options = {})
     pwd = 'a' * User::MIN_PASSWORD_LENGTH
-    post :create, user: { login: 'quire', email: 'quire@example.com',
-                          password: pwd, password_confirmation: pwd }.merge(options), person: { first_name: 'fred' }
+    post :create, params: { user: { login: 'quire', email: 'quire@example.com',
+                          password: pwd, password_confirmation: pwd }.merge(options), person: { first_name: 'fred' } }
   end
 end
